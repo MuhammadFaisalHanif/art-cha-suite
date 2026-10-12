@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ART CHA Hub — Suite</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0f1117;--bg2:#111827;--bg3:#1e2335;--card:#232840;--border:#2a2f4a;--border2:#363d5e;--text:#e8eaf0;--text2:#94a3b8;--text3:#4a5070;--green:#10b981;--accent:#4f6ef7;--red:#ef4444;--yellow:#f59e0b;--r:8px;--r2:5px}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+
+/* TOPBAR */
+.topbar{background:#111827;border-bottom:1px solid #374151;padding:0 18px;height:56px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:100}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-box{width:34px;height:34px;background:linear-gradient(135deg,#4f6ef7,#10b981);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff}
+.logo-name{font-size:14px;font-weight:600;color:#f9fafb}
+.logo-sub{font-size:11px;color:#9ca3af}
+.top-right{display:flex;align-items:center;gap:12px;font-size:11px;color:#9ca3af}
+.badge-local{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:#052e16;border:1px solid #065f46;color:#6ee7b7;font-size:11px;font-weight:500}
+.badge-local:before{content:"";width:6px;height:6px;border-radius:50%;background:#10b981}
+
+/* TABS */
+.tabbar{background:var(--bg2);border-bottom:1px solid var(--border);display:flex;overflow-x:auto;flex-shrink:0;scrollbar-width:thin}
+.tabbar::-webkit-scrollbar{height:3px}
+.tab{padding:11px 18px;font-size:12.5px;font-weight:500;color:var(--text2);cursor:pointer;border-bottom:3px solid transparent;display:flex;align-items:center;gap:7px;white-space:nowrap;transition:all .15s;user-select:none}
+.tab:hover{color:var(--text);background:rgba(255,255,255,.02)}
+.tab.on{color:#fff;border-bottom-color:var(--accent);background:var(--bg3)}
+.tab-icon{font-size:15px}
+
+/* CONTENT */
+.content-wrap{flex:1;position:relative;overflow:hidden}
+.frame-wrap{position:absolute;inset:0;display:none}
+.frame-wrap.on{display:block}
+iframe{width:100%;height:100%;border:none;display:block;background:#0f1117}
+
+/* HOME DASHBOARD */
+.home{padding:32px;max-width:1100px;margin:0 auto;overflow-y:auto;height:100%}
+.home-title{font-size:24px;font-weight:600;margin-bottom:6px;color:#fff}
+.home-sub{font-size:13px;color:var(--text2);margin-bottom:28px}
+.tool-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.tool-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px;cursor:pointer;transition:all .15s}
+.tool-card:hover{border-color:var(--accent);background:var(--bg3);transform:translateY(-2px)}
+.tool-icon{font-size:28px;margin-bottom:10px}
+.tool-name{font-size:14px;font-weight:600;color:#fff;margin-bottom:5px}
+.tool-desc{font-size:12px;color:var(--text2);line-height:1.5}
+.tool-user{display:inline-block;margin-top:10px;font-size:10px;padding:3px 8px;border-radius:10px;background:var(--bg3);color:var(--accent);border:1px solid var(--border2)}
+@media(max-width:800px){.tool-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:550px){.tool-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-box">ART</div>
+    <div><div class="logo-name">CHA Hub Suite</div><div class="logo-sub">Al Reyami Technologies — Cash Handling Automation Division</div></div>
+  </div>
+  <div class="top-right">
+    <span class="badge-local">Running Locally — No Internet Data Sent</span>
+    <span id="clockNow"></span>
+  </div>
+</div>
+
+<div class="tabbar" id="tabbar">
+  <div class="tab on" data-target="home"><span class="tab-icon">&#x1F3E0;</span>Home</div>
+  <div class="tab" data-target="hub"><span class="tab-icon">&#x1F5A5;</span>Machine Hub</div>
+  <div class="tab" data-target="renewal"><span class="tab-icon">&#x1F514;</span>Renewal Tracker</div>
+  <div class="tab" data-target="quote"><span class="tab-icon">&#x1F50D;</span>Quote Helper</div>
+  <div class="tab" data-target="repair"><span class="tab-icon">&#x1F4C4;</span>Repair Quote</div>
+  <div class="tab" data-target="entry"><span class="tab-icon">&#x2795;</span>New Machine Entry</div>
+  <div class="tab" data-target="phase4"><span class="tab-icon">&#x26A1;</span>Data Hub (AMC/ERP)</div>
+  <div class="tab" data-target="ocr"><span class="tab-icon">&#x1F4D8;</span>PDF Invoice Reader</div>
+</div>
+
+<div class="content-wrap">
+
+  <div class="frame-wrap on" id="frame-home">
+    <div class="home">
+      <div class="home-title">Welcome to ART CHA Hub</div>
+      <div class="home-sub">Pick a tool below, or use the tabs above. Each tool opens in this same window — your data and work stay separate per tool.</div>
+      <div class="tool-grid">
+
+        <div class="tool-card" data-open="hub">
+          <div class="tool-icon">&#x1F5A5;</div>
+          <div class="tool-name">Machine Hub</div>
+          <div class="tool-desc">Full registry of 5,508 machines — search, edit, add, import vServe exports, export Excel.</div>
+          <span class="tool-user">All staff</span>
+        </div>
+
+        <div class="tool-card" data-open="renewal">
+          <div class="tool-icon">&#x1F514;</div>
+          <div class="tool-name">Renewal Tracker</div>
+          <div class="tool-desc">AMC and warranty contracts expiring in 30/60/90 days, sorted by urgency and engineer.</div>
+          <span class="tool-user">Rishika</span>
+        </div>
+
+        <div class="tool-card" data-open="quote">
+          <div class="tool-icon">&#x1F50D;</div>
+          <div class="tool-name">Quote Helper</div>
+          <div class="tool-desc">Look up any customer or serial number instantly — copy machine details into ERP quotes.</div>
+          <span class="tool-user">Rishika</span>
+        </div>
+
+        <div class="tool-card" data-open="repair">
+          <div class="tool-icon">&#x1F4C4;</div>
+          <div class="tool-name">Repair Quote Builder</div>
+          <div class="tool-desc">Build a repair/spare-parts quote with one click — parts catalogue, auto totals, printable PDF.</div>
+          <span class="tool-user">Rishika</span>
+        </div>
+
+        <div class="tool-card" data-open="entry">
+          <div class="tool-icon">&#x2795;</div>
+          <div class="tool-name">New Machine Entry</div>
+          <div class="tool-desc">Manual form to register a newly sold machine with contract and engineer assignment.</div>
+          <span class="tool-user">Seeniya</span>
+        </div>
+
+        <div class="tool-card" data-open="phase4">
+          <div class="tool-icon">&#x26A1;</div>
+          <div class="tool-name">Data Hub — AMC / ERP Import</div>
+          <div class="tool-desc">Bulk update AMC renewals from a customer Excel, or import new machines from RightERP export.</div>
+          <span class="tool-user">Seeniya / Zainab</span>
+        </div>
+
+        <div class="tool-card" data-open="ocr" style="grid-column:span 1">
+          <div class="tool-icon">&#x1F4D8;</div>
+          <div class="tool-name">PDF Invoice Reader (OCR)</div>
+          <div class="tool-desc">Upload a scanned invoice PDF — auto-reads customer, serial numbers and dates using OCR.</div>
+          <span class="tool-user">Seeniya / Faisal</span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="frame-wrap" id="frame-hub"><iframe data-src="ART_Machine_Hub.html"></iframe></div>
+  <div class="frame-wrap" id="frame-renewal"><iframe data-src="ART_Renewal_Tracker.html"></iframe></div>
+  <div class="frame-wrap" id="frame-quote"><iframe data-src="ART_Quote_Helper.html"></iframe></div>
+  <div class="frame-wrap" id="frame-repair"><iframe data-src="ART_Repair_Quote.html"></iframe></div>
+  <div class="frame-wrap" id="frame-entry"><iframe data-src="ART_New_Machine_Entry.html"></iframe></div>
+  <div class="frame-wrap" id="frame-phase4"><iframe data-src="ART_Phase4_DataHub.html"></iframe></div>
+  <div class="frame-wrap" id="frame-ocr"><iframe data-src="ART_PDF_Invoice_Reader.html"></iframe></div>
+
+</div>
+
+<script>
+function showTab(target) {
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('on', t.getAttribute('data-target') === target); });
+  document.querySelectorAll('.frame-wrap').forEach(function(f){ f.classList.toggle('on', f.id === 'frame-' + target); });
+  // Lazy-load iframe src only when first opened
+  var fw = document.getElementById('frame-' + target);
+  if (fw) {
+    var iframe = fw.querySelector('iframe');
+    if (iframe && !iframe.src && iframe.getAttribute('data-src')) {
+      iframe.src = iframe.getAttribute('data-src');
+    }
+  }
+}
+
+document.querySelectorAll('.tab').forEach(function(tab) {
+  tab.addEventListener('click', function() { showTab(this.getAttribute('data-target')); });
+});
+
+document.querySelectorAll('.tool-card').forEach(function(card) {
+  card.addEventListener('click', function() { showTab(this.getAttribute('data-open')); });
+});
+
+function tickClock() {
+  document.getElementById('clockNow').textContent = new Date().toLocaleString('en-GB', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+tickClock();
+setInterval(tickClock, 30000);
+</script>
+</body>
+</html>
