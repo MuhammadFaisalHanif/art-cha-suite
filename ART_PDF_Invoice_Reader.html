@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ART PDF Invoice Reader</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0f1117;--bg2:#111827;--bg3:#1e2335;--card:#232840;--border:#2a2f4a;--border2:#363d5e;--text:#e8eaf0;--text2:#94a3b8;--text3:#4a5070;--green:#10b981;--accent:#4f6ef7;--red:#ef4444;--yellow:#f59e0b;--r:8px;--r2:5px}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.topbar{background:#111827;border-bottom:1px solid #374151;padding:0 22px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-box{width:34px;height:34px;background:linear-gradient(135deg,#ef4444,#f59e0b);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.logo-name{font-size:14px;font-weight:600;color:#f9fafb}
+.logo-sub{font-size:11px;color:#9ca3af}
+.wrap{padding:20px 22px;max-width:1300px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);margin-bottom:16px;overflow:hidden}
+.ch{padding:13px 18px;border-bottom:1px solid var(--border);background:#161b2e;display:flex;align-items:center;justify-content:space-between}
+.cht{font-size:14px;font-weight:600;color:#f1f5f9}
+.cb{padding:18px}
+.dz{border:2px dashed var(--border2);border-radius:var(--r);padding:40px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg3)}
+.dz:hover,.dz.drag{border-color:var(--accent);background:rgba(79,110,247,.07)}
+.dz-icon{font-size:42px;margin-bottom:10px}
+.dz-title{font-size:15px;font-weight:500;margin-bottom:5px}
+.dz-sub{font-size:12px;color:var(--text2)}
+.btn{font-family:'DM Sans',sans-serif;padding:8px 16px;border-radius:var(--r2);font-size:12px;font-weight:500;border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:var(--card);border-color:var(--accent)}
+.btn-blue{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-blue:hover{background:#3d5fe0}
+.btn-green{background:#064e3b;border-color:#065f46;color:#6ee7b7}
+.btn-green:hover{background:#065f46}
+.progress-wrap{margin-top:16px;display:none}
+.progress-wrap.show{display:block}
+.progress-label{font-size:12px;color:var(--text2);margin-bottom:6px;display:flex;justify-content:space-between}
+.progress-bar{height:8px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),#818cf8);border-radius:4px;transition:width .3s;width:0%}
+.results-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+.result-field{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:10px 12px}
+.result-field.fw{grid-column:1/-1}
+.rf-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.rf-value{font-size:13px;font-weight:500;color:var(--text)}
+.rf-value.mono{font-family:'DM Mono',monospace}
+.rf-value.editable{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:6px 8px;width:100%;color:var(--text);font-size:13px;font-family:inherit}
+.serial-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:12px;margin-bottom:8px}
+.serial-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.serial-num{font-family:'DM Mono',monospace;font-size:14px;font-weight:600;color:var(--green)}
+.serial-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:11px}
+.alert{border-radius:var(--r);padding:12px 16px;margin-bottom:14px;font-size:13px}
+.alert-info{background:#1e3a5f;border:1px solid #1e40af;color:#93c5fd}
+.alert-ok{background:#052e16;border:1px solid #065f46;color:#6ee7b7}
+.alert-warn{background:#451a03;border:1px solid #92400e;color:#fcd34d}
+.raw-text{background:#0a0c11;border:1px solid var(--border);border-radius:var(--r2);padding:12px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);max-height:200px;overflow-y:auto;white-space:pre-wrap;margin-top:10px}
+.preview-img{max-width:100%;border-radius:var(--r2);border:1px solid var(--border);margin-top:10px}
+.tbl-wrap{border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-top:12px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+thead th{background:var(--bg3);padding:8px 12px;text-align:left;font-size:10.5px;font-weight:500;color:var(--text2);letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+tbody tr{border-bottom:1px solid var(--border)}
+tbody tr:hover{background:var(--bg3)}
+td{padding:8px 12px}
+.mono{font-family:'DM Mono',monospace;font-size:12px}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--card);border:1px solid var(--border2);border-radius:var(--r);padding:11px 16px;font-size:13px;z-index:200;display:none;align-items:center;max-width:360px;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.toast.show{display:flex;animation:tin .25s ease}
+@keyframes tin{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
+.toast.ok{border-left:3px solid #10b981;color:#6ee7b7}
+.toast.err{border-left:3px solid #ef4444;color:#fca5a5}
+.toast.info{border-left:3px solid var(--accent);color:#93c5fd}
+.empty-msg{padding:32px;text-align:center;color:var(--text3);font-size:13px}
+.type-card{background:var(--bg3);border:2px solid var(--border);border-radius:var(--r2);padding:16px;cursor:pointer;transition:all .15s;text-align:center}
+.type-card:hover{border-color:var(--border2)}
+.type-card.on{border-color:var(--accent);background:rgba(79,110,247,.08)}
+.collapse-btn{background:none;border:1px solid var(--border);border-radius:4px;color:var(--text2);cursor:pointer;font-size:11px;padding:4px 10px;font-family:'DM Sans',sans-serif}
+@media(max-width:800px){.results-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-box">&#x1F4C4;</div>
+    <div><div class="logo-name">PDF Invoice Reader</div><div class="logo-sub">Al Reyami Technologies &#x2014; Auto Extract via OCR</div></div>
+  </div>
+  <div style="font-size:12px;color:#9ca3af" id="topDate"></div>
+</div>
+
+<div class="wrap">
+
+  <div class="alert alert-info">
+    &#x2139; Upload a RightERP scanned invoice PDF (tax invoice). The system reads the image using OCR and extracts customer, serial numbers, model, dates and amounts automatically.
+  </div>
+
+  <div class="card">
+    <div class="ch"><div class="cht">&#x1F4CB; What is this invoice for?</div></div>
+    <div class="cb">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div class="type-card on" id="typeNew" data-type="new">
+          <div style="font-size:24px;margin-bottom:6px">&#x2795;</div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:3px">New Machine Sale</div>
+          <div style="font-size:11px;color:var(--text2)">A new machine was sold. Add it to Machine Hub with warranty dates.</div>
+        </div>
+        <div class="type-card" id="typeAmc" data-type="amc">
+          <div style="font-size:24px;margin-bottom:6px">&#x1F504;</div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:3px">AMC Renewal</div>
+          <div style="font-size:11px;color:var(--text2)">Existing machine's contract renewed. Update start/end dates only.</div>
+        </div>
+        <div class="type-card" id="typeParts" data-type="parts">
+          <div style="font-size:24px;margin-bottom:6px">&#x1F527;</div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:3px">Spare Parts / Service</div>
+          <div style="font-size:11px;color:var(--text2)">Parts replaced on existing machine. This is a service log, not a new machine.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch"><div class="cht">&#x1F4C2; Upload Invoice PDF</div></div>
+    <div class="cb">
+      <div class="dz" id="dz">
+        <div class="dz-icon">&#x1F4C4;</div>
+        <div class="dz-title">Click to select or drag & drop invoice PDF here</div>
+        <div class="dz-sub">Scanned tax invoices from RightERP (image-based PDF)</div>
+      </div>
+      <input type="file" id="fileInput" accept=".pdf" style="display:none">
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-label"><span id="progressLabel">Processing...</span><span id="progressPct">0%</span></div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="resultsCard" style="display:none">
+    <div class="ch">
+      <div class="cht">&#x2705; Extracted Invoice Data</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-blue" id="addToHubBtn">+ Add to Machine Hub</button>
+        <button class="btn btn-green" id="exportBtn">&#x2B07; Export Excel</button>
+      </div>
+    </div>
+    <div class="cb">
+      <div id="resultsArea"></div>
+    </div>
+  </div>
+
+  <div class="card" id="rawCard" style="display:none">
+    <div class="ch">
+      <div class="cht">&#x1F50D; Raw OCR Text (for verification)</div>
+      <button class="collapse-btn" id="toggleRawBtn">Show/Hide</button>
+    </div>
+    <div class="cb" id="rawBody" style="display:none">
+      <div class="raw-text" id="rawText"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+var extractedData = null;
+var rawOcrText = '';
+
+var invoiceType = 'new';
+
+function init() {
+  document.getElementById('topDate').textContent = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+
+  document.querySelectorAll('.type-card').forEach(function(card) {
+    card.addEventListener('click', function() {
+      document.querySelectorAll('.type-card').forEach(function(c){ c.classList.remove('on'); });
+      this.classList.add('on');
+      invoiceType = this.getAttribute('data-type');
+      if (extractedData) displayResults(extractedData);
+    });
+  });
+
+  var dz = document.getElementById('dz');
+  var fileInput = document.getElementById('fileInput');
+  dz.addEventListener('click', function(){ fileInput.click(); });
+  fileInput.addEventListener('change', function(){ if(this.files[0]) processFile(this.files[0]); });
+  dz.addEventListener('dragover', function(e){ e.preventDefault(); dz.classList.add('drag'); });
+  dz.addEventListener('dragleave', function(){ dz.classList.remove('drag'); });
+  dz.addEventListener('drop', function(e){
+    e.preventDefault();
+    dz.classList.remove('drag');
+    if(e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
+  });
+  document.getElementById('toggleRawBtn').addEventListener('click', function(){
+    var b = document.getElementById('rawBody');
+    b.style.display = b.style.display === 'none' ? 'block' : 'none';
+  });
+  document.getElementById('exportBtn').addEventListener('click', exportToExcel);
+  document.getElementById('addToHubBtn').addEventListener('click', addToHub);
+}
+
+function showProgress(label, pct) {
+  document.getElementById('progressWrap').classList.add('show');
+  document.getElementById('progressLabel').textContent = label;
+  document.getElementById('progressPct').textContent = pct + '%';
+  document.getElementById('progressFill').style.width = pct + '%';
+}
+
+function hideProgress() {
+  document.getElementById('progressWrap').classList.remove('show');
+}
+
+function processFile(file) {
+  if (file.type !== 'application/pdf') {
+    showToast('Please upload a PDF file', 'err');
+    return;
+  }
+  document.getElementById('resultsCard').style.display = 'none';
+  document.getElementById('rawCard').style.display = 'none';
+  showProgress('Reading PDF...', 5);
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var typedArray = new Uint8Array(e.target.result);
+    pdfjsLib.getDocument(typedArray).promise.then(function(pdf) {
+      showProgress('Rendering page to image...', 15);
+      return pdf.getPage(1);
+    }).then(function(page) {
+      var scale = 2.5;
+      var viewport = page.getViewport({scale: scale});
+      var canvas = document.createElement('canvas');
+      var ctx = canvas.getContext('2d');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      return page.render({canvasContext: ctx, viewport: viewport}).promise.then(function(){
+        return canvas;
+      });
+    }).then(function(canvas) {
+      showProgress('Running OCR (this takes 10-20 sec)...', 30);
+      return Tesseract.recognize(canvas, 'eng', {
+        logger: function(m) {
+          if (m.status === 'recognizing text') {
+            var pct = 30 + Math.round(m.progress * 60);
+            showProgress('Reading text from invoice...', pct);
+          }
+        }
+      });
+    }).then(function(result) {
+      showProgress('Extracting fields...', 95);
+      rawOcrText = result.data.text;
+      var extracted = extractFields(rawOcrText);
+      showProgress('Done!', 100);
+      setTimeout(function() {
+        hideProgress();
+        displayResults(extracted);
+        displayRawText(rawOcrText);
+      }, 400);
+    }).catch(function(err) {
+      hideProgress();
+      showToast('Error: ' + err.message, 'err');
+      console.error(err);
+    });
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── FIELD EXTRACTION ─────────────────────────────────────────────────────
+function extractFields(text) {
+  var data = {
+    invoiceNo: '', docDate: '', customer: '', lpoNo: '', salesPerson: '',
+    netAmount: '', remarks: '', machines: [], itemLines: []
+  };
+
+  // Invoice No
+  var m = text.match(/Invoice No\.?\s*[:.]?\s*([A-Z0-9]+)/i);
+  if (m) data.invoiceNo = m[1];
+
+  // Doc Date
+  m = text.match(/Doc Date\s*[+:.]?\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i);
+  if (m) data.docDate = m[1];
+
+  // Customer - line after "To : DRxxxx", handle text on same line too
+  var lines = text.split('\n');
+  for (var i = 0; i < lines.length; i++) {
+    var toMatch = lines[i].match(/To\s*:\s*DR\d+\s*(.*)$/i);
+    if (toMatch) {
+      var rest = toMatch[1].trim();
+      if (rest && !/^Invoice/i.test(rest)) {
+        data.customer = rest;
+      } else if (i + 1 < lines.length) {
+        var nextLine = lines[i+1];
+        data.customer = nextLine.split(/\s+(?:Doc Date|Invoice)/i)[0].trim();
+      }
+      break;
+    }
+    var toMatch2 = lines[i].match(/^To\s*:\s*([A-Z][A-Za-z\s&\.]+)/i);
+    if (toMatch2 && !/DR\d+/i.test(lines[i])) {
+      data.customer = toMatch2[1].trim();
+      break;
+    }
+  }
+
+  // LPO No - OCR sometimes misreads ":" as "1", causing extra leading digit
+  m = text.match(/LPO No\.?\s*[+:.]?\s*([A-Z0-9\-\/]+)/i);
+  if (m) {
+    var lpoRaw = m[1];
+    // If pure 6-digit number starting with 1 immediately after "No." with no clear colon match, flag for review
+    var colonCheck = text.match(/LPO No\.?\s*:\s*([A-Z0-9\-\/]+)/i);
+    data.lpoNo = colonCheck ? colonCheck[1] : lpoRaw;
+    data.lpoUncertain = !colonCheck;
+  }
+
+  // Sales Person - handle colon, semicolon, or period as separator
+  m = text.match(/Sales Person\s*[:;.]?\s*([A-Za-z\s\-]+?)(?:\n|Attn|DO No|Job No)/i);
+  if (m) data.salesPerson = m[1].trim();
+
+  // Net Amount - handle missing colon after VAT
+  m = text.match(/Net Amount Inc\.?\s*VAT\s*[:.]?\s*([\d,]+\.\d{2})/i);
+  if (m) data.netAmount = m[1];
+
+  // Remarks - capture full line
+  m = text.match(/Remarks\s*[:.]?\s*(.+?)(?:\n|Payment Terms)/i);
+  if (m) data.remarks = m[1].trim();
+
+  // Capture item lines (code + description + qty) for spare parts visibility
+  var itemRegex = /(\d{6})\s+([A-Z0-9]+)\s+([\d.]+)[\|\}]?\s*NOS/gi;
+  var im;
+  while ((im = itemRegex.exec(text)) !== null) {
+    // description is usually on the next line
+    var afterIdx = im.index + im[0].length;
+    var restOfText = text.substring(afterIdx, afterIdx + 80);
+    var descLine = restOfText.split('\n')[1] || '';
+    data.itemLines.push({code: im[1], partCode: im[2], qty: im[3], desc: descLine.trim()});
+  }
+
+  // ── Method 1: Find "Serial no:" pattern (AMC multi-machine invoices) ──
+  var serialMatches = [];
+  var serialRegex = /Serial\s*no[:\s]*([A-Z0-9+]+)/gi;
+  var sm;
+  while ((sm = serialRegex.exec(text)) !== null) {
+    serialMatches.push({serial: sm[1], index: sm.index});
+  }
+  serialMatches.forEach(function(s) {
+    var context = text.substring(Math.max(0, s.index - 300), s.index);
+    var modelMatch = context.match(/(?:FOR|CODE)\s+([A-Z0-9\-\+]+)/i) || context.match(/([A-Z]{2,3}[\-\s]?\d{3,5}\+?)/);
+    var locMatch = context.match(/LOCATION[:\s]*([A-Z\s]+?)(?:\n|Period)/i);
+    var periodMatch = context.match(/Period From[:\s]*([\d\/]+)\s*To[:\s]*([\d\/]+)/i);
+    data.machines.push({
+      serial: s.serial, model: modelMatch ? modelMatch[1].trim() : '',
+      location: locMatch ? locMatch[1].trim() : '',
+      periodFrom: periodMatch ? periodMatch[1] : '', periodTo: periodMatch ? periodMatch[2] : '',
+      source: 'serial_no_line'
+    });
+  });
+
+  // ── Method 2: Find "SR-xxxxx/MD-MODEL/LOCATION" pattern (spare parts/AMC remarks) ──
+  if (data.machines.length === 0) {
+    var srRegex = /SR-?(\d+)\/MD-([A-Z0-9]+)\/([A-Z\-]+)/gi;
+    var srm;
+    while ((srm = srRegex.exec(text)) !== null) {
+      data.machines.push({
+        serial: srm[1], model: srm[2], location: srm[3],
+        periodFrom: '', periodTo: '', source: 'remarks_sr_pattern'
+      });
+    }
+  }
+
+  // ── Method 3: Plain "Serial No:" without "no" lowercase variant ──
+  if (data.machines.length === 0) {
+    var altRegex = /Serial\s*No[:\s]*([A-Z0-9+]+)/gi;
+    var am;
+    while ((am = altRegex.exec(text)) !== null) {
+      data.machines.push({serial: am[1], model: '', location: '', periodFrom: '', periodTo: '', source: 'serial_no_alt'});
+    }
+  }
+
+  return data;
+}
+
+// ── DISPLAY RESULTS ────────────────────────────────────────────────────────
+function displayResults(data) {
+  extractedData = data;
+  var html = '';
+
+  var typeLabels = {
+    new: {icon:'&#x2795;', title:'New Machine Sale', action:'This will add a new machine record to the Machine Hub.'},
+    amc: {icon:'&#x1F504;', title:'AMC Renewal', action:'This will update contract start/end dates on the existing machine. No new machine added.'},
+    parts: {icon:'&#x1F527;', title:'Spare Parts / Service Log', action:'This is a service record for an existing machine. Amount is for your reference only — accounting stays in RightERP.'}
+  };
+  var tl = typeLabels[invoiceType];
+
+  if (!data.invoiceNo && !data.customer && data.machines.length === 0) {
+    html = '<div class="alert alert-warn">&#x26A0; Could not extract structured data. Check the raw OCR text below and verify the invoice format.</div>';
+  } else {
+    html += '<div class="alert alert-info" style="margin-bottom:14px">' + tl.icon + ' <strong>' + tl.title + '</strong> &mdash; ' + tl.action + '</div>';
+
+    html += '<div class="results-grid">'
+      + field('Invoice No', data.invoiceNo, true, false)
+      + field('Doc Date', data.docDate, true, false)
+      + field('Customer', data.customer, false, true)
+      + field('LPO No' + (data.lpoUncertain ? ' &#x26A0; verify' : ''), data.lpoNo, true, false)
+      + field('Sales Person', data.salesPerson, false, false)
+      + (invoiceType !== 'parts' ? field('Net Amount (AED)', data.netAmount, true, false) : '')
+      + field('Remarks / Reference', data.remarks, false, true)
+      + '</div>';
+
+    if (data.machines.length) {
+      var sourceLabel = data.machines[0].source === 'remarks_sr_pattern' ? ' (from Remarks reference)' : '';
+      html += '<div style="margin-top:18px">'
+        + '<div style="font-size:12px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">'
+        + '&#x1F50C; ' + data.machines.length + ' Machine' + (data.machines.length>1?'s':'') + ' Found' + sourceLabel + '</div>';
+      data.machines.forEach(function(m, i) {
+        html += '<div class="serial-card">'
+          + '<div class="serial-card-top"><span class="serial-num">' + m.serial + '</span>'
+          + (m.model ? '<span style="font-size:11px;color:var(--text2)">' + m.model + '</span>' : '') + '</div>'
+          + '<div class="serial-grid">'
+          + '<div><span style="color:var(--text3)">Location: </span>' + (m.location || '-') + '</div>'
+          + '<div><span style="color:var(--text3)">Period From: </span>' + (m.periodFrom || '-') + '</div>'
+          + '<div><span style="color:var(--text3)">Period To: </span>' + (m.periodTo || '-') + '</div>'
+          + '</div></div>';
+      });
+      html += '</div>';
+    } else {
+      html += '<div class="alert alert-warn" style="margin-top:14px">&#x26A0; No serial numbers detected. Check raw text below — may need manual entry.</div>';
+    }
+
+    if (data.itemLines && data.itemLines.length) {
+      html += '<div style="margin-top:18px">'
+        + '<div style="font-size:12px;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">'
+        + '&#x1F527; ' + data.itemLines.length + ' Item Line' + (data.itemLines.length>1?'s':'') + ' on Invoice (Spare Parts / Services)</div>'
+        + '<div class="tbl-wrap"><table><thead><tr><th>Item Code</th><th>Part Code</th><th>Description</th><th>Qty</th></tr></thead><tbody>';
+      data.itemLines.forEach(function(it) {
+        html += '<tr><td class="mono">' + it.code + '</td><td class="mono">' + it.partCode + '</td><td>' + (it.desc || '-') + '</td><td>' + it.qty + '</td></tr>';
+      });
+      html += '</tbody></table></div></div>';
+    }
+  }
+
+  document.getElementById('resultsArea').innerHTML = html;
+  document.getElementById('resultsCard').style.display = 'block';
+  showToast('Extraction complete: ' + data.machines.length + ' machine(s) found', data.machines.length ? 'ok' : 'warn');
+}
+
+function field(label, val, mono, fw) {
+  return '<div class="result-field' + (fw ? ' fw' : '') + '">'
+    + '<div class="rf-label">' + label + '</div>'
+    + '<div class="rf-value' + (mono ? ' mono' : '') + '">' + (val || '<span style="color:var(--text3)">Not found</span>') + '</div>'
+    + '</div>';
+}
+
+function displayRawText(text) {
+  document.getElementById('rawText').textContent = text;
+  document.getElementById('rawCard').style.display = 'block';
+}
+
+// ── EXPORT ────────────────────────────────────────────────────────────────
+function exportToExcel() {
+  if (!extractedData) { showToast('No data to export', 'err'); return; }
+  var rows = [['Serial No','Model','Customer','Invoice No','Doc Date','Location','Period From','Period To','LPO No','Net Amount','Remarks']];
+  if (extractedData.machines.length) {
+    extractedData.machines.forEach(function(m) {
+      rows.push([m.serial, m.model, extractedData.customer, extractedData.invoiceNo, extractedData.docDate, m.location, m.periodFrom, m.periodTo, extractedData.lpoNo, extractedData.netAmount, extractedData.remarks]);
+    });
+  } else {
+    rows.push(['', '', extractedData.customer, extractedData.invoiceNo, extractedData.docDate, '', '', '', extractedData.lpoNo, extractedData.netAmount, extractedData.remarks]);
+  }
+  var wb = XLSX.utils.book_new();
+  var ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:18},{wch:14},{wch:30},{wch:14},{wch:12},{wch:22},{wch:12},{wch:12},{wch:18},{wch:12},{wch:30}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Extracted Invoice');
+  XLSX.writeFile(wb, 'Invoice_Extract_' + (extractedData.invoiceNo || 'data') + '.xlsx');
+  showToast('Exported to Excel', 'ok');
+}
+
+function addToHub() {
+  if (!extractedData) { showToast('No data extracted yet', 'err'); return; }
+  if (invoiceType === 'parts') {
+    showToast('Parts/Service invoices are not added as machines. Export Excel for your service log records.', 'info');
+    return;
+  }
+  if (!extractedData.machines.length) { showToast('No machine serial found to add', 'err'); return; }
+  if (invoiceType === 'amc') {
+    showToast(extractedData.machines.length + ' machine(s) ready — export Excel and use Phase4 DataHub "AMC Bulk Update" to update dates', 'info');
+  } else {
+    showToast(extractedData.machines.length + ' new machine(s) ready — export Excel and import via Machine Hub "Import vServe" button', 'ok');
+  }
+}
+
+var tTimer;
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.className = 'toast show ' + (type === 'warn' ? 'err' : (type||'ok'));
+  t.textContent = msg;
+  clearTimeout(tTimer);
+  tTimer = setTimeout(function(){ t.classList.remove('show'); }, 4000);
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>

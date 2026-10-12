@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ART New Machine Entry</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0f1117;--bg2:#181c27;--bg3:#1e2335;--card:#232840;--border:#2a2f4a;--border2:#363d5e;--text:#e8eaf0;--text2:#8892b4;--text3:#4a5070;--active:#10b981;--accent:#4f6ef7;--r:8px;--r2:5px;--expired:#ef4444;--soon:#f59e0b}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.topbar{background:#111827;border-bottom:1px solid #374151;padding:0 22px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-box{width:34px;height:34px;background:linear-gradient(135deg,#10b981,#4f6ef7);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.logo-name{font-size:14px;font-weight:600;color:#f9fafb}
+.logo-sub{font-size:11px;color:#9ca3af}
+.top-btns{display:flex;gap:8px;align-items:center}
+.btn{font-family:'DM Sans',sans-serif;padding:7px 14px;border-radius:var(--r2);font-size:12px;font-weight:500;border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:5px}
+.btn:hover{background:var(--card);border-color:var(--accent)}
+.btn-green{background:#064e3b;border-color:#065f46;color:#6ee7b7}
+.btn-green:hover{background:#065f46}
+.wrap{padding:24px 22px;max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 380px;gap:20px}
+@media(max-width:900px){.wrap{grid-template-columns:1fr}}
+
+/* FORM */
+.form-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.fc-head{padding:16px 20px;border-bottom:1px solid var(--border);background:#161b2e;display:flex;align-items:center;justify-content:space-between}
+.fc-title{font-size:14px;font-weight:600}
+.fc-sub{font-size:12px;color:var(--text2)}
+.fc-body{padding:20px}
+.section{margin-bottom:22px}
+.section:last-child{margin-bottom:0}
+.sec-title{font-size:11px;font-weight:600;color:#818cf8;letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.fw{grid-column:1/-1}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:11px;color:var(--text2);font-weight:500;letter-spacing:.04em;text-transform:uppercase}
+.field label .req{color:var(--expired);margin-left:2px}
+.field input,.field select,.field textarea{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:9px 12px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border .15s;width:100%}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent)}
+.field input::placeholder{color:var(--text3)}
+.field input.err,.field select.err{border-color:var(--expired)}
+.field .hint{font-size:11px;color:var(--text3)}
+.field .err-msg{font-size:11px;color:var(--expired);display:none}
+.field.has-err .err-msg{display:block}
+.field.has-err label{color:var(--expired)}
+.mono-inp{font-family:'DM Mono',monospace !important;letter-spacing:.03em}
+/* Autocomplete */
+.ac-wrap{position:relative}
+.ac-box{position:absolute;top:calc(100% + 3px);left:0;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);z-index:20;max-height:200px;overflow-y:auto;display:none}
+.ac-box.open{display:block}
+.ac-item{padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)}
+.ac-item:hover,.ac-item.hi{background:var(--bg3)}
+.ac-item:last-child{border-bottom:none}
+.ac-new{color:var(--accent);font-style:italic}
+
+/* SUBMIT */
+.submit-row{display:flex;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+.btn-submit{flex:1;padding:12px;border-radius:var(--r2);font-size:14px;font-weight:600;background:var(--accent);border:none;color:#fff;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.btn-submit:hover{background:#3d5fe0}
+.btn-reset{padding:12px 20px;border-radius:var(--r2);font-size:13px;font-weight:500;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif}
+.btn-reset:hover{background:var(--card)}
+
+/* RIGHT PANEL */
+.right-col{display:flex;flex-direction:column;gap:16px}
+
+/* STATUS PREVIEW */
+.preview-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.pc-head{padding:13px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;color:#f1f5f9;background:#161b2e}
+.pc-body{padding:16px}
+.preview-status{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 0}
+.ps-badge{padding:8px 20px;border-radius:6px;font-size:14px;font-weight:600}
+.ps-days{font-size:12px;color:var(--text2)}
+.preview-fields{display:flex;flex-direction:column;gap:8px}
+.pf{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)}
+.pf:last-child{border-bottom:none}
+.pf-l{font-size:11px;color:var(--text2)}
+.pf-v{font-size:12px;font-weight:500;font-family:'DM Mono',monospace;text-align:right;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* LOG */
+.log-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;flex:1}
+.lc-head{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;color:#f1f5f9;background:#161b2e}
+.lc-cnt{font-size:11px;color:var(--text2);font-family:'DM Mono',monospace}
+.lc-body{max-height:340px;overflow-y:auto}
+.log-item{padding:11px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+.log-item:hover{background:var(--bg3)}
+.log-item:last-child{border-bottom:none}
+.li-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px}
+.li-serial{font-family:'DM Mono',monospace;font-size:12px;font-weight:600}
+.li-time{font-size:10px;color:var(--text3)}
+.li-cust{font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.log-empty{padding:32px;text-align:center;color:var(--text3);font-size:13px}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:3px;font-size:12px;font-weight:500;white-space:nowrap}
+.badge:before{content:"";width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.b-act{background:#052e16;color:#6ee7b7}.b-act:before{background:#10b981}
+.b-sn{background:#451a03;color:#fcd34d}.b-sn:before{background:#f59e0b}
+.b-d90{background:#431407;color:#fed7aa}.b-d90:before{background:#fb923c}
+.b-exp{background:#450a0a;color:#fca5a5}.b-exp:before{background:#ef4444}
+.b-nc{background:#1f2937;color:#9ca3af}.b-nc:before{background:#4b5563}
+.b-nd{background:#1e1b4b;color:#a5b4fc}.b-nd:before{background:#6366f1}
+.eb{display:inline-block;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:600}
+.eRobin{background:#1e3a5f;color:#93c5fd}
+.eAbhith{background:#022c22;color:#6ee7b7}
+.ePrijo{background:#451a03;color:#fcd34d}
+.eShyju{background:#2e1065;color:#c4b5fd}
+.eUnassigned{background:#1f2937;color:#9ca3af}
+
+/* SUCCESS FLASH */
+.flash{position:fixed;inset:0;background:rgba(6,79,58,.15);z-index:100;display:none;align-items:center;justify-content:center;pointer-events:none}
+.flash.show{display:flex;animation:fshow .4s ease}
+@keyframes fshow{from{opacity:0}to{opacity:1}}
+.flash-box{background:#052e16;border:2px solid #10b981;border-radius:12px;padding:28px 40px;text-align:center}
+.flash-icon{font-size:40px;margin-bottom:10px}
+.flash-title{font-size:18px;font-weight:600;color:#6ee7b7}
+.flash-sub{font-size:13px;color:#34d399;margin-top:4px}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--card);border:1px solid var(--border2);border-radius:var(--r);padding:11px 16px;font-size:13px;z-index:200;display:none;align-items:center;max-width:340px;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.toast.show{display:flex;animation:tin .25s ease}
+@keyframes tin{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
+.toast.ok{border-left:3px solid #10b981;color:#6ee7b7}
+.toast.err{border-left:3px solid var(--expired);color:#fca5a5}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-box">➕</div>
+    <div><div class="logo-name">New Machine Entry</div><div class="logo-sub">Al Reyami Technologies — Register new machine sale</div></div>
+  </div>
+  <div class="top-btns">
+    <button class="btn btn-green" onclick="exportLog()">&#x2B07; Export Log</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- LEFT: FORM -->
+  <div class="form-card">
+    <div class="fc-head">
+      <div>
+        <div class="fc-title">New Machine Registration</div>
+        <div class="fc-sub">Fill after every new machine sale — data syncs to Machine Hub</div>
+      </div>
+    </div>
+    <div class="fc-body">
+
+      <!-- CUSTOMER -->
+      <div class="section">
+        <div class="sec-title">Customer Details</div>
+        <div class="grid2">
+          <div class="field fw">
+            <label>Customer Name <span class="req">*</span></label>
+            <div class="ac-wrap">
+              <input id="fCust" class="mono-inp" placeholder="Type to search or add new customer..." autocomplete="off">
+              <div class="ac-box" id="acCust"></div>
+            </div>
+            <div class="hint">Search existing or type new customer name</div>
+            <div class="err-msg">Customer name is required</div>
+          </div>
+          <div class="field">
+            <label>Branch / Location <span class="req">*</span></label>
+            <input id="fBranch" placeholder="e.g. Deira, Sharjah Main">
+            <div class="err-msg">Branch is required</div>
+          </div>
+          <div class="field">
+            <label>Department</label>
+            <input id="fDept" placeholder="e.g. Finance, Admin">
+          </div>
+        </div>
+      </div>
+
+      <!-- MACHINE -->
+      <div class="section">
+        <div class="sec-title">Machine Details</div>
+        <div class="grid2">
+          <div class="field">
+            <label>Serial Number <span class="req">*</span></label>
+            <input id="fSerial" class="mono-inp" placeholder="Machine serial number">
+            <div class="err-msg">Serial number is required</div>
+          </div>
+          <div class="field">
+            <label>Model <span class="req">*</span></label>
+            <div class="ac-wrap">
+              <input id="fModel" placeholder="Select or type model..." autocomplete="off">
+              <div class="ac-box" id="acModel"></div>
+            </div>
+            <div class="err-msg">Model is required</div>
+          </div>
+          <div class="field">
+            <label>File No</label>
+            <input id="fFileNo" class="mono-inp" placeholder="e.g. HT9100-1234">
+            <div class="hint">Leave blank to auto-generate</div>
+          </div>
+          <div class="field">
+            <label>Invoice / ERP Ref No</label>
+            <input id="fInvoice" class="mono-inp" placeholder="ERP invoice reference">
+          </div>
+        </div>
+      </div>
+
+      <!-- CONTRACT -->
+      <div class="section">
+        <div class="sec-title">Contract / Warranty</div>
+        <div class="grid2">
+          <div class="field">
+            <label>Service Type <span class="req">*</span></label>
+            <select id="fStype" onchange="updatePreview()">
+              <option value="WARRANTY WITH SPARE PARTS">Warranty With Spare Parts</option>
+              <option value="WARRANTY WITH OUT SPARE PARTS">Warranty Without Spare Parts</option>
+              <option value="AMC WITH SPARE PARTS">AMC With Spare Parts</option>
+              <option value="AMC WITH OUT  SPARE PARTS">AMC Without Spare Parts</option>
+              <option value="COMPREHENSIVE">Comprehensive</option>
+              <option value="NO CONTRACT">No Contract</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Agreement Type</label>
+            <select id="fAgr">
+              <option value="SALES">Sales</option>
+              <option value="LEASE">Lease</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Contract / Warranty Start <span class="req">*</span></label>
+            <input type="date" id="fStart" onchange="updatePreview()">
+            <div class="err-msg">Start date is required</div>
+          </div>
+          <div class="field">
+            <label>Contract / Warranty End <span class="req">*</span></label>
+            <input type="date" id="fEnd" onchange="updatePreview()">
+            <div class="err-msg">End date is required</div>
+          </div>
+          <div class="field">
+            <label>Delivery Date</label>
+            <input type="date" id="fDelivery">
+          </div>
+          <div class="field">
+            <label>PM (Preventive Maintenance)</label>
+            <select id="fPm">
+              <option value="NO">No</option>
+              <option value="YES">Yes</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- ENGINEER -->
+      <div class="section">
+        <div class="sec-title">Engineer Assignment</div>
+        <div class="grid2">
+          <div class="field">
+            <label>Assigned Engineer</label>
+            <select id="fEng">
+              <option value="">Auto-assign by location</option>
+              <option value="Robin">Robin — Dubai</option>
+              <option value="Abhith">Abhith — Sharjah / Northern Emirates</option>
+              <option value="Prijo">Prijo — Al Ain / Abu Dhabi</option>
+              <option value="Shyju">Shyju — Abu Dhabi Main</option>
+              <option value="Unassigned">Unassigned</option>
+            </select>
+            <div class="hint">Leave on Auto to assign by branch location</div>
+          </div>
+          <div class="field">
+            <label>Remarks / Notes</label>
+            <input id="fRemarks" placeholder="Any notes about this machine or contract">
+          </div>
+        </div>
+      </div>
+
+      <div class="submit-row">
+        <button class="btn-reset" onclick="resetForm()">Clear Form</button>
+        <button class="btn-submit" onclick="submitForm()">&#x2714; Register Machine</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-col">
+
+    <!-- STATUS PREVIEW -->
+    <div class="preview-card">
+      <div class="pc-head">&#x1F4CB; Contract Preview</div>
+      <div class="pc-body">
+        <div class="preview-status" id="previewStatus">
+          <div style="font-size:32px">&#x1F4C5;</div>
+          <div style="font-size:12px;color:var(--text3)">Fill in dates to see contract status</div>
+        </div>
+        <div class="preview-fields" id="previewFields"></div>
+      </div>
+    </div>
+
+    <!-- ENTRY LOG -->
+    <div class="log-card">
+      <div class="lc-head">
+        <span>&#x1F4DC; Today's Entries</span>
+        <span class="lc-cnt" id="logCnt">0 entries</span>
+      </div>
+      <div class="lc-body" id="logBody">
+        <div class="log-empty">No machines registered yet today</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- FLASH -->
+<div class="flash" id="flash">
+  <div class="flash-box">
+    <div class="flash-icon">&#x2705;</div>
+    <div class="flash-title">Machine Registered!</div>
+    <div class="flash-sub" id="flashSub">Added to the log</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CUSTOMER & MODEL LISTS ─────────────────────────────────────────────────
+var CUSTOMERS = ["3S MONEY","ABU DHABI COMMERCIAL BANK","ABU DHABI FLOUR MILL","ABU DHABI ISLAMIC BANK","ABU DHABI NATIONAL ENERGY COMPANY","ADCB","AJMAN BANK","AL AHLI BANK OF KUWAIT","AL ANSARI EXCHANGE","AL ANSARI EXCHANGE LLC","AL DAHAB EXCHANGE","AL FARDAN EXCHANGE","AL GHURAIR EXCHANGE","AL HILAL BANK","AL MARYAH COMMUNITY BANK","AL MASRAF","AL RAJHI BANK","ARAB BANK","BANK OF BARODA","BANK OF SHARJAH","CBD","CITIBANK","COMMERCIAL BANK INTERNATIONAL","COMMERCIAL BANK OF DUBAI","DUBAI BANK","DUBAI ISLAMIC BANK","EMIRATES NBD","EMIRATES POST","FIRST ABU DHABI BANK","HABIB BANK","HSBC","INVEST BANK","MASHREQ BANK","NATIONAL BANK OF FUJAIRAH","NATIONAL BANK OF RAS AL KHAIMAH","NOOR BANK","RAK BANK","SHARJAH ISLAMIC BANK","STANDARD CHARTERED","UNION NATIONAL BANK","UNITED ARAB BANK","WEMA BANK"];
+var MODELS = ["1826","1836","610","BK-120a","BPS C1","BPS C1 PRINTER","BPS C1-D","BPS C1-F","CEMA SDM 500","CHIHUA CH202","CN-550","CN-900","CT-960","CTS 1000","CTS 2000","CTS 2000 GS","CTS 2000 SV","HT 1000","HT 2000","HT 3200","HT 5000","HT 7000","HT 9100","IH-110","IH-110 SD","IH-150","IH-150 SD","JBC-3000","JBC-5000","NC-600","NC-6500","NC-9000","POS TERMINAL","SDM-100","SDM-500","SDM-50V","UV-4000","UV-6000"];
+var ENGS_BY_BRANCH = {
+  ain:['AL AIN','ALAIN','BURAIMI','SANAIYA','JIMI','FOAH','SWEIHAN'],
+  auh:['ABU DHABI','ABUDHABI','MUSSAFAH','MUSAFFAH','HAMDAN','MUROOR','REEM','KHALIDIYA','ICAD','KHALIFA CITY','MADINAT ZAYED','CORNICHE','ELECTRA','NAJDA','KHALIFA ST','MUROOR RD','AIRPORT RD'],
+  dxb:['DUBAI','DEIRA','BUR DUBAI','AL QUOZ','KARAMA','BUSINESS BAY','SHEIKH ZAYED','SZR','JEBEL ALI','JABAL ALI','FESTIVAL','DOWNTOWN','JUMEIRAH','BARSHA','SILICON','MIRDIF','RASHIDIYA','GARHOUD','GARGASH','SATWA','NAIF','GOLD SOUK','DRAGON MART','MEDIA CITY','TECOM','DIFC','DIP','JLT','OUD METHA','SOUK AL KABEER','ABU HAIL','MALL OF EMIRATES','NBF','HEAD OFFICE'],
+  shj:['SHARJAH','SHJ','AJMAN','FUJAIRAH','RAK','RAS AL KHAIMAH','UMM AL QUWAIN','UAQ','KALBA','KHOR FAKKAN','DIBBA','SAIF ZONE','HAMRIYA','DHAID','MUWEILAH']
+};
+
+function autoEng(branch) {
+  if (!branch) return 'Unassigned';
+  var b = branch.toUpperCase();
+  for (var k of ENGS_BY_BRANCH.ain) if (b.includes(k)) return 'Prijo';
+  for (var k of ENGS_BY_BRANCH.auh) if (b.includes(k)) return 'Shyju';
+  for (var k of ENGS_BY_BRANCH.dxb) if (b.includes(k)) return 'Robin';
+  for (var k of ENGS_BY_BRANCH.shj) if (b.includes(k)) return 'Abhith';
+  return 'Unassigned';
+}
+
+// ── SESSION LOG ────────────────────────────────────────────────────────────
+var sessionLog = [];
+
+// ── AUTOCOMPLETE ──────────────────────────────────────────────────────────
+function setupAC(inputId, boxId, list, allowNew) {
+  var inp = document.getElementById(inputId);
+  var box = document.getElementById(boxId);
+  var idx = -1;
+
+  inp.addEventListener('input', function() {
+    var q = this.value.trim().toLowerCase();
+    if (!q) { box.classList.remove('open'); return; }
+    var matches = list.filter(function(x){ return x.toLowerCase().includes(q); }).slice(0,10);
+    if (allowNew && q.length > 1 && !matches.find(function(x){ return x.toLowerCase()===q; })) {
+      matches.unshift('__NEW__:' + this.value.trim());
+    }
+    if (!matches.length) { box.classList.remove('open'); return; }
+    idx = -1;
+    box.innerHTML = matches.map(function(m) {
+      if (m.startsWith('__NEW__:')) {
+        var v = m.replace('__NEW__:','');
+        return '<div class="ac-item ac-new" data-v="'+v+'">+ Add new: &ldquo;'+v+'&rdquo;</div>';
+      }
+      return '<div class="ac-item" data-v="'+m+'">'+m+'</div>';
+    }).join('');
+    box.querySelectorAll('.ac-item').forEach(function(el) {
+      el.addEventListener('click', function() {
+        inp.value = this.getAttribute('data-v');
+        box.classList.remove('open');
+        if (inputId === 'fBranch' || inputId === 'fCust') updatePreview();
+      });
+    });
+    box.classList.add('open');
+  }.bind(inp));
+
+  inp.addEventListener('keydown', function(e) {
+    var items = box.querySelectorAll('.ac-item');
+    if (e.key === 'ArrowDown') { idx = Math.min(idx+1, items.length-1); items.forEach(function(it,i){ it.classList.toggle('hi', i===idx); }); e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { idx = Math.max(idx-1, 0); items.forEach(function(it,i){ it.classList.toggle('hi', i===idx); }); e.preventDefault(); }
+    else if (e.key === 'Enter') { if (idx >= 0 && items[idx]) { inp.value = items[idx].getAttribute('data-v'); box.classList.remove('open'); } }
+    else if (e.key === 'Escape') { box.classList.remove('open'); }
+  });
+}
+
+// ── STATUS CALC ────────────────────────────────────────────────────────────
+function calcStatus(stype, endDate) {
+  var s = (stype || '').toUpperCase();
+  if (s === 'NO CONTRACT') return 'NO CONTRACT';
+  if (!endDate) return 'NO DATE';
+  var ed = new Date(endDate), td = new Date(); td.setHours(0,0,0,0);
+  if (ed < td) {
+    if (s.includes('WARRANTY')) return 'WARRANTY EXPIRED';
+    if (s.includes('AMC')) return 'AMC EXPIRED';
+    return 'EXPIRED';
+  }
+  var days = Math.round((ed - td) / 86400000);
+  if (days <= 30) return 'EXPIRING SOON';
+  if (days <= 90) return 'EXPIRING 90D';
+  return 'ACTIVE';
+}
+
+function daysLeft(endDate) {
+  if (!endDate) return null;
+  var ed = new Date(endDate), td = new Date(); td.setHours(0,0,0,0);
+  return Math.round((ed - td) / 86400000);
+}
+
+var SC = {'ACTIVE':'act','EXPIRING SOON':'sn','EXPIRING 90D':'d90','WARRANTY EXPIRED':'exp','AMC EXPIRED':'exp','EXPIRED':'exp','NO CONTRACT':'nc','NO DATE':'nd'};
+var SL = {'ACTIVE':'Active','EXPIRING SOON':'Expiring Soon','EXPIRING 90D':'Expiring 90d','WARRANTY EXPIRED':'Wty Expired','AMC EXPIRED':'AMC Expired','EXPIRED':'Expired','NO CONTRACT':'No Contract','NO DATE':'No Date'};
+
+// ── PREVIEW ────────────────────────────────────────────────────────────────
+function updatePreview() {
+  var stype = document.getElementById('fStype').value;
+  var start = document.getElementById('fStart').value;
+  var end = document.getElementById('fEnd').value;
+  var st = calcStatus(stype, end);
+  var sc = SC[st] || 'nd';
+  var sl = SL[st] || st;
+  var dl = daysLeft(end);
+  var psEl = document.getElementById('previewStatus');
+  var pfEl = document.getElementById('previewFields');
+
+  psEl.innerHTML = '<span class="badge b-' + sc + '" style="font-size:14px;padding:8px 20px">' + sl + '</span>' +
+    (dl !== null ? '<div class="ps-days">' + (dl >= 0 ? dl + ' days remaining' : Math.abs(dl) + ' days overdue') + '</div>' : '');
+
+  if (start && end) {
+    pfEl.innerHTML =
+      pf('Start Date', fmtD(start)) +
+      pf('End Date', fmtD(end)) +
+      pf('Contract Type', stype) +
+      pf('Duration', calcDuration(start, end));
+  } else {
+    pfEl.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px">Fill in dates above</div>';
+  }
+}
+
+function pf(l, v) {
+  return '<div class="pf"><span class="pf-l">' + l + '</span><span class="pf-v">' + v + '</span></div>';
+}
+
+function calcDuration(s, e) {
+  var sd = new Date(s), ed = new Date(e);
+  var months = (ed.getFullYear() - sd.getFullYear()) * 12 + (ed.getMonth() - sd.getMonth());
+  if (months >= 12) return Math.round(months/12*10)/10 + ' years';
+  return months + ' months';
+}
+
+function fmtD(d) {
+  if (!d) return '—';
+  var p = d.split('-');
+  return p.length === 3 ? p[2] + '-' + p[1] + '-' + p[0] : d;
+}
+
+// ── VALIDATION ─────────────────────────────────────────────────────────────
+function validate() {
+  var ok = true;
+  var checks = [
+    { id: 'fCust', msg: 'Customer name is required' },
+    { id: 'fBranch', msg: 'Branch is required' },
+    { id: 'fSerial', msg: 'Serial number is required' },
+    { id: 'fModel', msg: 'Model is required' },
+  ];
+  checks.forEach(function(c) {
+    var el = document.getElementById(c.id);
+    var field = el.closest('.field');
+    if (!el.value.trim()) {
+      field.classList.add('has-err');
+      el.classList.add('err');
+      ok = false;
+    } else {
+      field.classList.remove('has-err');
+      el.classList.remove('err');
+    }
+  });
+
+  var stype = document.getElementById('fStype').value;
+  if (stype !== 'NO CONTRACT') {
+    ['fStart', 'fEnd'].forEach(function(id) {
+      var el = document.getElementById(id);
+      var field = el.closest('.field');
+      if (!el.value) {
+        field.classList.add('has-err');
+        el.classList.add('err');
+        ok = false;
+      } else {
+        field.classList.remove('has-err');
+        el.classList.remove('err');
+      }
+    });
+    // Validate end date is after start date
+    var startVal = document.getElementById('fStart').value;
+    var endVal = document.getElementById('fEnd').value;
+    if (startVal && endVal && new Date(endVal) <= new Date(startVal)) {
+      var endEl = document.getElementById('fEnd');
+      endEl.closest('.field').classList.add('has-err');
+      endEl.classList.add('err');
+      showToast('End date must be after start date', 'err');
+      ok = false;
+    }
+  }
+  return ok;
+}
+
+// ── SUBMIT ─────────────────────────────────────────────────────────────────
+function submitForm() {
+  if (!validate()) { showToast('Please fill in all required fields', 'err'); return; }
+
+  var branch = document.getElementById('fBranch').value.trim();
+  var engSel = document.getElementById('fEng').value;
+  var engineer = engSel || autoEng(branch);
+  var serial = document.getElementById('fSerial').value.trim();
+  var stype = document.getElementById('fStype').value;
+  var start = document.getElementById('fStart').value;
+  var end = document.getElementById('fEnd').value;
+
+  var fileNo = document.getElementById('fFileNo').value.trim();
+  if (!fileNo) {
+    var model = document.getElementById('fModel').value.trim().replace(/\s+/g,'-').toUpperCase();
+    fileNo = model + '-' + Date.now().toString().slice(-4);
+  }
+
+  var rec = {
+    id: fileNo,
+    customer: document.getElementById('fCust').value.trim(),
+    branch: branch,
+    dept: document.getElementById('fDept').value.trim(),
+    model: document.getElementById('fModel').value.trim(),
+    serial: serial,
+    agreement: document.getElementById('fAgr').value,
+    service_type: stype,
+    start_date: start,
+    end_date: end,
+    delivery_date: document.getElementById('fDelivery').value,
+    invoice_ref: document.getElementById('fInvoice').value.trim(),
+    remarks: document.getElementById('fRemarks').value.trim(),
+    engineer: engineer,
+    pm: document.getElementById('fPm').value,
+    status: calcStatus(stype, end),
+    entry_time: new Date().toISOString(),
+    entry_by: 'Manual Entry'
+  };
+
+  sessionLog.unshift(rec);
+  saveLog();
+  renderLog();
+  showFlash(serial, rec.customer);
+  resetForm();
+}
+
+// ── LOG ────────────────────────────────────────────────────────────────────
+function saveLog() {
+  localStorage.setItem('art_entry_log', JSON.stringify(sessionLog));
+}
+
+function loadLog() {
+  var saved = localStorage.getItem('art_entry_log');
+  if (saved) sessionLog = JSON.parse(saved);
+}
+
+function renderLog() {
+  var el = document.getElementById('logBody');
+  document.getElementById('logCnt').textContent = sessionLog.length + ' entr' + (sessionLog.length === 1 ? 'y' : 'ies');
+  if (!sessionLog.length) {
+    el.innerHTML = '<div class="log-empty">No machines registered yet</div>';
+    return;
+  }
+  el.innerHTML = sessionLog.map(function(r, i) {
+    var sc = SC[r.status] || 'nd';
+    var t = new Date(r.entry_time);
+    var timeStr = t.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) + ' ' + t.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+    return '<div class="log-item">' +
+      '<div class="li-top">' +
+      '<span class="li-serial">' + r.serial + '</span>' +
+      '<span class="li-time">' + timeStr + '</span>' +
+      '</div>' +
+      '<div class="li-cust">' + r.customer + ' &mdash; ' + (r.branch||'') + '</div>' +
+      '<div style="display:flex;align-items:center;gap:6px;margin-top:4px">' +
+      '<span class="badge b-' + sc + '" style="font-size:10px">' + (SL[r.status]||r.status) + '</span>' +
+      '<span class="eb e' + r.engineer + '" style="font-size:10px">' + r.engineer + '</span>' +
+      '</div>' +
+      '</div>';
+  }).join('');
+}
+
+// ── EXPORT ─────────────────────────────────────────────────────────────────
+function exportLog() {
+  if (!sessionLog.length) { showToast('No entries to export yet', 'err'); return; }
+  var rows = [['File No','Serial No','Customer','Branch','Department','Model','Invoice Ref',
+    'Agreement','Service Type','Start Date','End Date','Delivery Date','Status','Engineer','PM','Remarks','Entry Time']];
+  sessionLog.forEach(function(r) {
+    rows.push([r.id,r.serial,r.customer,r.branch,r.dept,r.model,r.invoice_ref||'',
+      r.agreement,r.service_type,r.start_date,r.end_date,r.delivery_date||'',
+      r.status,r.engineer,r.pm,r.remarks||'',r.entry_time]);
+  });
+  var wb = XLSX.utils.book_new();
+  var ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:14},{wch:22},{wch:30},{wch:22},{wch:16},{wch:14},{wch:16},
+    {wch:10},{wch:28},{wch:12},{wch:12},{wch:12},{wch:20},{wch:12},{wch:6},{wch:30},{wch:22}];
+  XLSX.utils.book_append_sheet(wb, ws, 'New Machines');
+  XLSX.writeFile(wb, 'ART_NewMachines_' + new Date().toISOString().split('T')[0] + '.xlsx');
+  showToast('Exported ' + sessionLog.length + ' entries', 'ok');
+}
+
+// ── FORM RESET ─────────────────────────────────────────────────────────────
+function resetForm() {
+  ['fCust','fBranch','fDept','fSerial','fModel','fFileNo','fInvoice','fRemarks'].forEach(function(id){
+    document.getElementById(id).value = '';
+    document.getElementById(id).classList.remove('err');
+  });
+  ['fStart','fEnd','fDelivery'].forEach(function(id){
+    document.getElementById(id).value = '';
+    document.getElementById(id).classList.remove('err');
+  });
+  document.querySelectorAll('.field').forEach(function(f){ f.classList.remove('has-err'); });
+  document.getElementById('fStype').value = 'WARRANTY WITH SPARE PARTS';
+  document.getElementById('fAgr').value = 'SALES';
+  document.getElementById('fPm').value = 'NO';
+  document.getElementById('fEng').value = '';
+  // Reset preview
+  document.getElementById('previewStatus').innerHTML = '<div style="font-size:32px">&#x1F4C5;</div><div style="font-size:12px;color:var(--text3)">Fill in dates to see contract status</div>';
+  document.getElementById('previewFields').innerHTML = '';
+  // Set today as default start
+  document.getElementById('fStart').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fCust').focus();
+}
+
+// ── FLASH ──────────────────────────────────────────────────────────────────
+function showFlash(serial, cust) {
+  var el = document.getElementById('flash');
+  document.getElementById('flashSub').textContent = serial + ' — ' + cust;
+  el.classList.add('show');
+  setTimeout(function(){ el.classList.remove('show'); }, 2000);
+}
+
+// ── TOAST ──────────────────────────────────────────────────────────────────
+var tTimer;
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.className = 'toast show ' + (type||'ok');
+  t.textContent = msg;
+  clearTimeout(tTimer);
+  tTimer = setTimeout(function(){ t.classList.remove('show'); }, 3000);
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+function init() {
+  setupAC('fCust', 'acCust', CUSTOMERS, true);
+  setupAC('fModel', 'acModel', MODELS, true);
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.ac-wrap')) {
+      document.querySelectorAll('.ac-box').forEach(function(b){ b.classList.remove('open'); });
+    }
+  });
+  // Default start date to today
+  document.getElementById('fStart').value = new Date().toISOString().split('T')[0];
+  loadLog();
+  renderLog();
+}
+
+init();
+</script>
+</body>
+</html>

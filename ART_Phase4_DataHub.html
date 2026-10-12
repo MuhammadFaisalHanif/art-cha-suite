@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ART Phase 4 — ERP Import & AMC Updater</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0f1117;--bg2:#111827;--bg3:#1e2335;--card:#232840;--border:#2a2f4a;--border2:#363d5e;--text:#e8eaf0;--text2:#94a3b8;--text3:#4a5070;--active:#10b981;--accent:#4f6ef7;--expired:#ef4444;--soon:#f59e0b;--r:8px;--r2:5px}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.topbar{background:#111827;border-bottom:1px solid #374151;padding:0 22px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-box{width:34px;height:34px;background:linear-gradient(135deg,#f59e0b,#ef4444);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.logo-name{font-size:14px;font-weight:600;color:#f9fafb}
+.logo-sub{font-size:11px;color:#9ca3af}
+.wrap{padding:20px 22px;max-width:1300px;margin:0 auto}
+.tabs{display:flex;gap:0;margin-bottom:20px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.tab{flex:1;padding:13px 10px;text-align:center;cursor:pointer;font-size:13px;font-weight:500;color:var(--text2);border:none;background:none;font-family:'DM Sans',sans-serif;transition:all .15s;border-right:1px solid var(--border)}
+.tab:last-child{border-right:none}
+.tab.on{background:var(--accent);color:#fff}
+.tab:hover:not(.on){background:var(--bg3);color:var(--text)}
+.panel{display:none}.panel.on{display:block}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);margin-bottom:16px;overflow:hidden}
+.card-head{padding:14px 18px;border-bottom:1px solid var(--border);background:#161b2e;display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:14px;font-weight:600;color:#f1f5f9;display:flex;align-items:center;gap:8px}
+.card-sub{font-size:12px;color:var(--text2)}
+.card-body{padding:18px}
+
+/* SUMMARY BOXES */
+.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.sbox{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;border-top:3px solid}
+.sbox.matched{border-top-color:var(--active)}
+.sbox.new{border-top-color:var(--accent)}
+.sbox.scrap{border-top-color:var(--expired)}
+.sbox.total{border-top-color:var(--soon)}
+.sbox-n{font-size:28px;font-weight:600;font-family:'DM Mono',monospace;margin-bottom:3px}
+.sbox.matched .sbox-n{color:var(--active)}
+.sbox.new .sbox-n{color:var(--accent)}
+.sbox.scrap .sbox-n{color:var(--expired)}
+.sbox.total .sbox-n{color:var(--soon)}
+.sbox-l{font-size:11px;color:var(--text2);font-weight:500}
+
+/* BUTTONS */
+.btn{font-family:'DM Sans',sans-serif;padding:8px 16px;border-radius:var(--r2);font-size:12px;font-weight:500;border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:var(--card);border-color:var(--accent)}
+.btn-blue{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-blue:hover{background:#3d5fe0}
+.btn-green{background:#064e3b;border-color:#065f46;color:#6ee7b7}
+.btn-green:hover{background:#065f46}
+.btn-red{background:#450a0a;border-color:#7f1d1d;color:#fca5a5}
+.btn-red:hover{background:#7f1d1d}
+.btn-lg{padding:11px 24px;font-size:14px;font-weight:600}
+
+/* DROP ZONE */
+.dz{border:2px dashed var(--border2);border-radius:var(--r);padding:28px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg3);margin-bottom:14px}
+.dz:hover,.dz.drag{border-color:var(--accent);background:rgba(79,110,247,.07)}
+.dz-icon{font-size:32px;margin-bottom:8px}
+.dz-title{font-size:14px;font-weight:500;margin-bottom:4px}
+.dz-sub{font-size:12px;color:var(--text2)}
+
+/* TABLE */
+.tbl-wrap{border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.tbl-head{padding:11px 14px;background:#161b2e;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.tbl-title{font-size:13px;font-weight:600;color:#f1f5f9}
+.tbl-cnt{font-size:11px;color:var(--text2);font-family:'DM Mono',monospace}
+.tbl-scroll{overflow-x:auto;max-height:400px;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+thead th{background:var(--bg3);padding:8px 12px;text-align:left;font-size:10.5px;font-weight:500;color:var(--text2);letter-spacing:.06em;text-transform:uppercase;position:sticky;top:0;border-bottom:1px solid var(--border)}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:hover{background:var(--bg3)}
+tbody tr:last-child{border-bottom:none}
+td{padding:8px 12px;vertical-align:middle}
+.mono{font-family:'DM Mono',monospace;font-size:12px}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:500;white-space:nowrap}
+.badge:before{content:"";width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.b-match{background:#052e16;color:#6ee7b7}.b-match:before{background:#10b981}
+.b-new{background:#1e3a5f;color:#93c5fd}.b-new:before{background:#3b82f6}
+.b-scrap{background:#450a0a;color:#fca5a5}.b-scrap:before{background:#ef4444}
+.b-skip{background:#1f2937;color:#9ca3af}.b-skip:before{background:#4b5563}
+.b-updated{background:#052e16;color:#6ee7b7}
+.b-warn{background:#451a03;color:#fcd34d}
+
+/* ALERT BOX */
+.alert{border-radius:var(--r);padding:14px 16px;margin-bottom:12px;font-size:13px}
+.alert-warn{background:#451a03;border:1px solid #92400e;color:#fcd34d}
+.alert-ok{background:#052e16;border:1px solid #065f46;color:#6ee7b7}
+.alert-info{background:#1e3a5f;border:1px solid #1e40af;color:#93c5fd}
+.alert-err{background:#450a0a;border:1px solid #7f1d1d;color:#fca5a5}
+
+/* RESULTS */
+.result-section{margin-bottom:16px}
+.rs-title{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;padding:6px 10px;border-radius:var(--r2)}
+.rs-ok{background:#052e16;color:#6ee7b7}
+.rs-new{background:#1e3a5f;color:#93c5fd}
+.rs-warn{background:#451a03;color:#fcd34d}
+.rs-err{background:#450a0a;color:#fca5a5}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--card);border:1px solid var(--border2);border-radius:var(--r);padding:11px 16px;font-size:13px;z-index:200;display:none;align-items:center;max-width:360px;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.toast.show{display:flex;animation:tin .25s ease}
+@keyframes tin{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
+.toast.ok{border-left:3px solid #10b981;color:#6ee7b7}
+.toast.err{border-left:3px solid #ef4444;color:#fca5a5}
+.toast.info{border-left:3px solid var(--accent);color:#93c5fd}
+
+/* FORM */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fi{display:flex;flex-direction:column;gap:4px}
+.fi.fw{grid-column:1/-1}
+.fi label{font-size:10.5px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.fi input,.fi select{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:8px 11px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border .15s}
+.fi input:focus,.fi select:focus{border-color:var(--accent)}
+.fi input::placeholder{color:var(--text3)}
+
+.empty-msg{padding:40px;text-align:center;color:var(--text3);font-size:13px}
+
+@media(max-width:800px){.summary-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-box">⚡</div>
+    <div><div class="logo-name">ART Phase 4 — Data Hub</div><div class="logo-sub">ERP Import &amp; AMC Bulk Updater</div></div>
+  </div>
+  <div style="font-size:12px;color:#9ca3af" id="topDate"></div>
+</div>
+
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab on" onclick="showPanel('amc')">🔄 AMC Bulk Update</button>
+    <button class="tab" onclick="showPanel('erp')">📦 ERP New Machines</button>
+    <button class="tab" onclick="showPanel('upload')">⬆ Upload New Files</button>
+  </div>
+
+  <!-- ── AMC BULK UPDATE ─────────────────────────────────────────── -->
+  <div class="panel on" id="panel-amc">
+
+    <div class="summary-grid">
+      <div class="sbox total"><div class="sbox-n" id="aa-total">0</div><div class="sbox-l">Total in AMC File</div></div>
+      <div class="sbox matched"><div class="sbox-n" id="aa-matched">0</div><div class="sbox-l">Matched in Machine Hub</div></div>
+      <div class="sbox new"><div class="sbox-n" id="aa-new">0</div><div class="sbox-l">New — Not in Hub</div></div>
+      <div class="sbox scrap"><div class="sbox-n" id="aa-scrap">0</div><div class="sbox-l">⚠ Scrap / Remove Alert</div></div>
+    </div>
+
+    <div class="card" id="scrapAlert" style="display:none">
+      <div class="card-head"><div class="card-title">⚠️ Scrap Machine Alert</div></div>
+      <div class="card-body">
+        <div class="alert alert-err" id="scrapMsg"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">📋 Al Ansari Exchange — AMC Renewal 2024</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-blue btn-lg" onclick="runAMCUpdate()">⚡ Update All Machines</button>
+          <button class="btn btn-green" onclick="exportAMCResult()">⬇ Export Result</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="alert alert-info" style="margin-bottom:14px">
+          ℹ️ Click <strong>Update All Machines</strong> to update contract dates for all 31 Al Ansari machines in one click. Scrap machines will be flagged, new machines will be listed separately.
+        </div>
+        <div id="amcResultArea">
+          <div class="tbl-wrap">
+            <div class="tbl-head">
+              <span class="tbl-title">AMC Machine List</span>
+              <span class="tbl-cnt" id="amcTblCnt">31 machines</span>
+            </div>
+            <div class="tbl-scroll">
+              <table>
+                <thead><tr>
+                  <th>Serial No</th><th>Model</th><th>Location</th>
+                  <th>AMC Start</th><th>AMC End</th><th>Status in Hub</th><th>Remarks</th>
+                </tr></thead>
+                <tbody id="amcTbl"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="newMachinesCard" style="display:none">
+      <div class="card-head"><div class="card-title">🆕 New Machines — Not in Hub</div><div class="card-sub">Review and add to Machine Hub</div></div>
+      <div class="card-body" id="newMachinesBody"></div>
+    </div>
+
+  </div>
+
+  <!-- ── ERP NEW MACHINES ────────────────────────────────────────── -->
+  <div class="panel" id="panel-erp">
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">📦 RightERP — New Machine Sales (Zainab)</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-blue btn-lg" onclick="runERPImport()">⚡ Import to Machine Hub</button>
+          <button class="btn btn-green" onclick="exportERPResult()">⬇ Export List</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="alert alert-info" style="margin-bottom:14px">
+          ℹ️ <strong>85 machines</strong> found in Zainab's ERP export with serial numbers. Click <strong>Import</strong> to add new machines that are not already in the hub.
+        </div>
+        <div class="tbl-wrap">
+          <div class="tbl-head">
+            <span class="tbl-title">ERP Machine Sales</span>
+            <span class="tbl-cnt" id="erpTblCnt">85 records</span>
+          </div>
+          <div class="tbl-scroll">
+            <table>
+              <thead><tr>
+                <th>Serial No</th><th>Customer</th><th>Model</th>
+                <th>Invoice No</th><th>Location</th><th>Amount (AED)</th><th>Status</th>
+              </tr></thead>
+              <tbody id="erpTbl"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── UPLOAD NEW FILES ────────────────────────────────────────── -->
+  <div class="panel" id="panel-upload">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+      <div class="card">
+        <div class="card-head"><div class="card-title">📋 Upload New AMC File</div></div>
+        <div class="card-body">
+          <div class="dz" id="dzAMC" onclick="document.getElementById('fileAMC').click()"
+            ondragover="event.preventDefault();this.classList.add('drag')"
+            ondragleave="this.classList.remove('drag')"
+            ondrop="onDropAMC(event)">
+            <div class="dz-icon">📂</div>
+            <div class="dz-title">Drop AMC Excel file here</div>
+            <div class="dz-sub">Al Ansari, Central Bank, or any customer AMC list</div>
+          </div>
+          <input type="file" id="fileAMC" accept=".xlsx,.xls" style="display:none" onchange="onAMCFile(this.files[0])">
+          <div id="amcUploadStat"></div>
+          <div style="margin-top:12px;font-size:12px;color:var(--text2)">
+            <strong>Expected columns:</strong><br>
+            Serial Number, Model, Location, Start Date, End Date, Remarks
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><div class="card-title">📦 Upload New ERP Export</div></div>
+        <div class="card-body">
+          <div class="dz" id="dzERP" onclick="document.getElementById('fileERP').click()"
+            ondragover="event.preventDefault();this.classList.add('drag')"
+            ondragleave="this.classList.remove('drag')"
+            ondrop="onDropERP(event)">
+            <div class="dz-icon">📂</div>
+            <div class="dz-title">Drop RightERP Excel file here</div>
+            <div class="dz-sub">Zainab's monthly export from RightERP</div>
+          </div>
+          <input type="file" id="fileERP" accept=".xlsx,.xls,.xlsb" style="display:none" onchange="onERPFile(this.files[0])">
+          <div id="erpUploadStat"></div>
+          <div style="margin-top:12px;font-size:12px;color:var(--text2)">
+            <strong>Expected columns:</strong><br>
+            Customer, Product, ProductGroup, SRNO (Serial), InvNo, Location
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-title">📖 How to use this portal</div></div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:13px;line-height:1.8;color:var(--text2)">
+          <div>
+            <div style="color:#f1f5f9;font-weight:600;margin-bottom:8px">🔄 AMC Bulk Update (Seeniya)</div>
+            1. Get AMC renewal Excel from customer<br>
+            2. Upload here → Upload tab<br>
+            3. Go to AMC Bulk Update tab<br>
+            4. Click "Update All Machines"<br>
+            5. All dates updated instantly<br>
+            6. Export result for records
+          </div>
+          <div>
+            <div style="color:#f1f5f9;font-weight:600;margin-bottom:8px">📦 ERP New Machines (Zainab)</div>
+            1. Zainab exports invoice report from RightERP<br>
+            2. Upload here → Upload tab<br>
+            3. Go to ERP New Machines tab<br>
+            4. Click "Import to Machine Hub"<br>
+            5. New machines added automatically<br>
+            6. Duplicates skipped automatically
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var AA_B64 = "W3sic2VyaWFsIjogIjEwOTI3NCIsICJtb2RlbCI6ICJOQzcxMDAiLCAibG9jYXRpb24iOiAiREVJUkEgVFJFQVNVUlkgKCBNVVJTSElEIEJBWkFBUikiLCAiYW1vdW50IjogMTAwMC4wLCAic3RhcnRfZGF0ZSI6ICIyMDI0LTAxLTAxIiwgImVuZF9kYXRlIjogIjIwMjQtMTItMzEiLCAicmVtYXJrcyI6ICIifSwgeyJzZXJpYWwiOiAiMTEwNTIyIiwgIm1vZGVsIjogIk5DNzEwMCIsICJsb2NhdGlvbiI6ICJERUlSQSBUUkVBU1VSWSAoTVVSU0hJRCBCQVpBQVIpIiwgImFtb3VudCI6IDEwMDAuMCwgInN0YXJ0X2RhdGUiOiAiMjAyNC0wMS0wMSIsICJlbmRfZGF0ZSI6ICIyMDI0LTEyLTMxIiwgInJlbWFya3MiOiAiIn0sIHsic2VyaWFsIjogIjEwOTI2NCIsICJtb2RlbCI6ICJOQzcxMDAiLCAibG9jYXRpb24iOiAiREVJUkEgTkFJRiIsICJhbW91bnQiOiAxMDAwLjAsICJzdGFydF9kYXRlIjogIjIwMjQtMDEtMDEiLCAiZW5kX2RhdGUiOiAiMjAyNC0xMi0zMSIsICJyZW1hcmtzIjogIiJ9LCB7InNlcmlhbCI6ICIxMDkyNjMiLCAibW9kZWwiOiAiTkM3MTAwIiwgImxvY2F0aW9uIjogIkJVUkpVTUFOIENFTlRSRSIsICJhbW91bnQiOiAxMDAwLjAsICJzdGFydF9kYXRlIjogIjIwMjQtMDEtMDEiLCAiZW5kX2RhdGUiOiAiMjAyNC0xMi0zMSIsICJyZW1hcmtzIjogIlNjcmFwIG1hY2hpbmUtIFRvIGJlIHJlbW92ZWQgZnJvbSBBTUMifSwgeyJzZXJpYWwiOiAiMTA5Mjc0IiwgIm1vZGVsIjogIk5DNzEwMCIsICJsb2NhdGlvbiI6ICJTSEFSSkFIIFRSRUFTVVJZIiwgImFtb3VudCI6IDEwMDAuMCwgInN0YXJ0X2RhdGUiOiAiMjAyNC0wMS0wMSIsICJlbmRfZGF0ZSI6ICIyMDI0LTEyLTMxIiwgInJlbWFya3MiOiAiIn0sIHsic2VyaWFsIjogIjEwNzIyNSIsICJtb2RlbCI6ICJOQzcxMDAiLCAibG9jYXRpb24iOiAiU0hBUkpBSCBUUkVBU1VSWSIsICJhbW91bnQiOiAxMDAwLjAsICJzdGFydF9kYXRlIjogIjIwMjQtMDEtMDEiLCAiZW5kX2RhdGUiOiAiMjAyNC0xMi0zMSIsICJyZW1hcmtzIjogIiJ9LCB7InNlcmlhbCI6ICIxMDkyODEiLCAibW9kZWwiOiAiTkM3MTAwIiwgImxvY2F0aW9uIjogIlNIQVJKQUggS0lORyBGQUlTQUwgUk9BRCIsICJhbW91bnQiOiAxMDAwLjAsICJzdGFydF9kYXRlIjogIjIwMjQtMDEtMDEiLCAiZW5kX2RhdGUiOiAiMjAyNC0xMi0zMSIsICJyZW1hcmtzIjogIiJ9LCB7InNlcmlhbCI6ICIxMDkyNjkiLCAibW9kZWwiOiAiTkM3MTAwIiwgImxvY2F0aW9uIjogIlNIQVJKQUggQUwgV0FESEEiLCAiYW1vdW50IjogMTAwMC4wLCAic3RhcnRfZGF0ZSI6ICIyMDI0LTAxLTAxIiwgImVuZF9kYXRlIjogIjIwMjQtMTItMzEiLCAicmVtYXJrcyI6ICIifSwgeyJzZXJpYWwiOiAiMTA5MjY2IiwgIm1vZGVsIjogIk5DNzEwMCIsICJsb2NhdGlvbiI6ICJTSEFSSkFIIENPLU9QIFNPQ0lFVFkgSEFMV0FOIiwgImFtb3VudCI6IDEwMDAuMCwgInN0YXJ0X2RhdGUiOiAiMjAyNC0wMS0wMSIsICJlbmRfZGF0ZSI6ICIyMDI0LTEyLTMxIiwgInJlbWFya3MiOiAiIn0sIHsic2VyaWFsIjogIjEwOTI3NyIsICJtb2RlbCI6ICJOQzcxMDAiLCAibG9jYXRpb24iOiAiUkFTIEFMIEtIQUlNQSIsICJhbW91bnQiOiAxMDAwLjAsICJzdGFydF9kYXRlIjogIjIwMjQtMDEtMDEiLCAiZW5kX2RhdGUiOiAiMjAyNC0xMi0zMSIsICJyZW1hcmtzIjogIiJ9LCB7InNlcmlhbCI6ICIxMDQzMTciLCAibW9kZWwiOiAiTkM3MTAwIiwgImxvY2F0aW9uIjogIlJBUyBBTCBLSEFJTUEiLCAiYW1vdW50IjogMTAwMC4wLCAic3RhcnRfZGF0ZSI6ICIyMDI0LTAxLTAxIiwgImVuZF9kYXRlIjogIjIwMjQtMTItMzEiLCAicmVtYXJrcyI6ICIifSwgeyJzZXJpYWwiOiAiMTA5MjgwIiwgIm1vZGVsIjogIk5DNzEwMCIsICJsb2NhdGlvbiI6ICJLSEFMSURJWUEgU1BBUiBTVVBFUiBNQVJLRVQgQVVIIiwgImFtb3VudCI6IDEwMDAuMCwgInN0YXJ0X2RhdGUiOiAiMjAyNC0wMS0wMSIsICJlbmRfZGF0ZSI6ICIyMDI0LTEyLTMxIiwgInJlbWFya3MiOiAiIn0sIHsic2VyaWFsIjogIjEwOTI3NiIsICJtb2RlbCI6ICJOQzcxMDAiLCAibG9jYXRpb24iOiAiTUFSSU5BIE1BTEwgQVVIIEJSQU5DSCIsICJhbW91bnQiOiAxMDAwLjAsICJzdGFydF9kYXRlIjogIjIwMjQtMDEtMDEiLCAiZW5kX2RhdGUiOiAiMjAyNC0xMi0zMSIsICJyZW1hcmtzIjogIiJ9LCB7InNlcmlhbCI6ICIxMDcyMzAiLCAibW9kZWwiOiAiTkM3MTAwIiwgImxvY2F0aW9uIjogIktIQUxJRElZQSBNQUxMIEFVSCBCUi4iLCAiYW1vdW50IjogMTAwMC4wLCAic3RhcnRfZGF0ZSI6ICIyMDI0LTAxLTAxIiwgImVuZF9kYXRlIjogIjIwMjQtMTItMzEiLCAicmVtYXJrcyI6ICIifSwgeyJzZXJpYWwiOiAiMTA5MjY1IiwgIm1vZGVsIjogIk5DNzEwMCIsICJsb2NhdGlvbiI6ICJFTEVDVFJBIEFCVURIQUJJIiwgImFtb3VudCI6IDEwMDAuMCwgInN0YXJ0X2RhdGUiOiAiMjAyNC0wMS0wMSIsICJlbmRfZGF0ZSI6ICIyMDI0LTEyLTMxIiwgInJlbWFya3MiOiAiIn0sIHsic2VyaWFsIjogIjEwOTI3MSIsICJtb2RlbCI6ICJOQzcxMDAiLCAibG9jYXRpb24iOiAiUlVXQUlTIEFCVURIQUJJIiwgImFtb3VudCI6IDEwMDAuMCwgInN0YXJ0X2RhdGUiOiAiMjAyNC0wMS0wMSIsICJlbmRfZGF0ZSI6ICIyMDI0LTEyLTMxIiwgInJlbWFya3MiOiAiIn0sIHsic2VyaWFsIjogIjEwOTI3OSIsICJtb2RlbCI6ICJOQzcxMDAiLCAibG9jYXRpb24iOiAiQkFOSVlBUyBDTy1PUCBNVVNTRkFIIDM3IEFVSCIsICJhbW91bnQiOiAxMDAwLjAsICJzdGFydF9kYXRlIjogIjIwMjQtMDEtMDEiLCAiZW5kX2RhdGUiOiAiMjAyNC0xMi0zMSIsICJyZW1hcmtzIjogIiJ9LCB7InNlcmlhbCI6ICIxMDkyNjciLCAibW9kZWwiOiAiTkM3MTAwIiwgImxvY2F0aW9uIjogIkFMIEFJTiIsICJhbW91bnQiOiAxMDAwLjAsICJzdGFydF9kYXRlIjogIjIwMjQtMDEtMDEiLCAiZW5kX2RhdGUiOiAiMjAyNC0xMi0zMSIsICJyZW1hcmtzIjogIiJ9LCB7InNlcmlhbCI6ICIyMDAyNzciLCAibW9kZWwiOiAiTkM3NTAwIiwgImxvY2F0aW9uIjogIkhBTURBTiBCUkFOQ0giLCAiYW1vdW50IjogMTAwMC4wLCAic3RhcnRfZGF0ZSI6ICIyMDI0LTAxLTAxIiwgImVuZF9kYXRlIjogIjIwMjQtMTItMzEiLCAicmVtYXJrcyI6ICIifSwgeyJzZXJpYWwiOiAiMjAwMTUyIiwgIm1vZGVsIjogIk5DNzUwMCIsICJsb2NhdGlvbiI6ICJBTCBCQVJTSEEiLCAiYW1vdW50IjogMTAwMC4wLCAic3RhcnRfZGF0ZSI6ICIyMDI0LTAxLTAxIiwgImVuZF9kYXRlIjogIjIwMjQtMTItMzEiLCAicmVtYXJrcyI6ICIifSwgeyJzZXJpYWwiOiAiMjAwMTUxIiwgIm1vZGVsIjogIk5DNzUwMCIsICJsb2NhdGlvbiI6ICJBTCBCQVJTSEEiLCAiYW1vdW50IjogMTAwMC4wLCAic3RhcnRfZGF0ZSI6ICIyMDI0LTAxLTAxIiwgImVuZF9kYXRlIjogIjIwMjQtMTItMzEiLCAicmVtYXJrcyI6ICIifSwgeyJzZXJpYWwiOiAiMjAwMTUwIiwgIm1vZGVsIjogIk5DNzUwMCIsICJsb2NhdGlvbiI6ICJTSEFSSkFIIiwgImFtb3VudCI6IDEwMDAuMCwgInN0YXJ0X2RhdGUiOiAiMjAyNC0wMS0wMSIsICJlbmRfZGF0ZSI6ICIyMDI0LTEyLTMxIiwgInJlbWFya3MiOiAiIn0sIHsic2VyaWFsIjogIjIwMDI4NiIsICJtb2RlbCI6ICJOQzc1MDAiLCAibG9jYXRpb24iOiAiTVVSU0hJRCBCQVpBUiIsICJhbW91bnQiOiAxMDAwLjAsICJzdGFydF9kYXRlIjogIjIwMjQtMDEtMDEiLCAiZW5kX2RhdGUiOiAiMjAyNC0xMi0zMSIsICJyZW1hcmtzIjogIiJ9LCB7InNlcmlhbCI6ICIyMDAyNzQiLCAibW9kZWwiOiAiTkM3NTAwIiwgImxvY2F0aW9uIjogIlNIQVJKQUggVFJFQVNVUlkiLCAiYW1vdW50IjogNTgzLjAsICJzdGFydF9kYXRlIjogIjE4LjExLjIyIiwgImVuZF9kYXRlIjogIjIwMjQtMDUtMTciLCAicmVtYXJrcyI6ICJVbmRlciB3YXJyYW50eSAxOCBNb250aHMifSwgeyJzZXJpYWwiOiAiMjAwMjc4IiwgIm1vZGVsIjogIk5DIDc1MDAiLCAibG9jYXRpb24iOiAiQUwgQUlOIEJSQU5DSCIsICJhbW91bnQiOiA1MDAuMCwgInN0YXJ0X2RhdGUiOiAiMjkuMTIuMjIiLCAiZW5kX2RhdGUiOiAiMjAyNC0wNi0yOCIsICJyZW1hcmtzIjogIlVuZGVyIHdhcnJhbnR5IDE4IE1vbnRocyJ9LCB7InNlcmlhbCI6ICIyMDAyNzkiLCAibW9kZWwiOiAiTkMgNzUwMCIsICJsb2NhdGlvbiI6ICJBTCBBSU4gVFJFQVNVUlkgREVQVCIsICJhbW91bnQiOiA1MDAuMCwgInN0YXJ0X2RhdGUiOiAiMjkuMTIuMjIiLCAiZW5kX2RhdGUiOiAiMjAyNC0wNi0yOCIsICJyZW1hcmtzIjogIlVuZGVyIHdhcnJhbnR5IDE4IE1vbnRocyJ9LCB7InNlcmlhbCI6ICIyMDAyNzUiLCAibW9kZWwiOiAiTkMgNzUwMCIsICJsb2NhdGlvbiI6ICJTSEFSSkFIIE1BSU4iLCAiYW1vdW50IjogODMzLjAsICJzdGFydF9kYXRlIjogIjEyLjA4LjIyIiwgImVuZF9kYXRlIjogIjIwMjQtMDItMTEiLCAicmVtYXJrcyI6ICJVbmRlciB3YXJyYW50eSAxOCBNb250aHMifSwgeyJzZXJpYWwiOiAiMjAwMjg3IiwgIm1vZGVsIjogIk5DIDc1MDAiLCAibG9jYXRpb24iOiAiTVVSU0hJRCBCQVpBUiBERUlSQSIsICJhbW91bnQiOiA3NTAuMCwgInN0YXJ0X2RhdGUiOiAiMzAuMDkuMjIiLCAiZW5kX2RhdGUiOiAiMjAyNC0wMy0yOSIsICJyZW1hcmtzIjogIlVuZGVyIHdhcnJhbnR5IDE4IE1vbnRocyJ9LCB7InNlcmlhbCI6ICIyMDAyODUiLCAibW9kZWwiOiAiTkMgNzUwMCIsICJsb2NhdGlvbiI6ICJNVVJTSElEIEJBWkFSIERFSVJBIiwgImFtb3VudCI6IDkxNi4wLCAic3RhcnRfZGF0ZSI6ICIwNi4wNy4yMiIsICJlbmRfZGF0ZSI6ICIyMDI0LTAxLTA1IiwgInJlbWFya3MiOiAiVW5kZXIgd2FycmFudHkgMTggTW9udGhzIn0sIHsic2VyaWFsIjogIjIwMDI4NCIsICJtb2RlbCI6ICJOQyA3NTAwIiwgImxvY2F0aW9uIjogIkFMIEJBUlNIQSIsICJhbW91bnQiOiA1ODMuMCwgInN0YXJ0X2RhdGUiOiAiMjIuMTEuMjIiLCAiZW5kX2RhdGUiOiAiMjAyNC0wNS0yMSIsICJyZW1hcmtzIjogIlVuZGVyIHdhcnJhbnR5IDE4IE1vbnRocyJ9LCB7InNlcmlhbCI6ICIxMzQ5MSIsICJtb2RlbCI6ICJOQyAzNTAwIiwgImxvY2F0aW9uIjogIkFMIFFVT1oiLCAiYW1vdW50IjogMTAwMC4wLCAic3RhcnRfZGF0ZSI6ICIyMDI0LTAxLTAxIiwgImVuZF9kYXRlIjogIjIwMjQtMTItMzEiLCAicmVtYXJrcyI6ICIifV0=";
+var ERP_B64 = "W3sic2VyaWFsIjogIjMyMDAwMDAwMjYwMTFBMDA1NzMiLCAiY3VzdG9tZXIiOiAiQ2FzaCIsICJtb2RlbCI6ICIxLVBvY2tldCBiYW5rbm90ZSBDb3VudGVyIiwgImludm9pY2UiOiAiMklMMjYwMDYzOSIsICJsb2NhdGlvbiI6ICJEVUJBSSBIRUFEIE9GRklDRSIsICJzcCI6ICJNdWhhbW1hZCBGYWlzYWwgSGFuaWYiLCAiYW1vdW50IjogMjUwMC4wfSwgeyJzZXJpYWwiOiAiOTErMDAwMDAyNjAxMUEwMDc0MSIsICJjdXN0b21lciI6ICJDYXNoIiwgIm1vZGVsIjogIkJBTksgTk9URSBTT1JURVIiLCAiaW52b2ljZSI6ICIySUwyNjAwNjUxIiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiA2MjUwLjB9LCB7InNlcmlhbCI6ICI5MUYwMDAwMDI1MDcxQTAwNTI0IiwgImN1c3RvbWVyIjogIkNhc2giLCAibW9kZWwiOiAiQkFOS05PVEUgQ09VTlRFUiIsICJpbnZvaWNlIjogIjJJTDI1MDE2OTEiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDU1MDAuMH0sIHsic2VyaWFsIjogIkRIMjUwMTgwMDE3IiwgImN1c3RvbWVyIjogIkdSQU5EIFNUT1JFUyBMLkwuQy4iLCAibW9kZWwiOiAiTVVMVEkgQ1VSUkVOQ1kgREVURUNUT1IgRFAgMjI4OCIsICJpbnZvaWNlIjogIjJJTDI1MDA1MTIiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDMwMDAuMH0sIHsic2VyaWFsIjogIkRIMjUwMTgwMDE4IiwgImN1c3RvbWVyIjogIkdSQU5EIFNUT1JFUyBMLkwuQy4iLCAibW9kZWwiOiAiTVVMVEkgQ1VSUkVOQ1kgREVURUNUT1IgRFAgMjI4OCIsICJpbnZvaWNlIjogIjJJTDI1MDA1MTIiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDMwMDAuMH0sIHsic2VyaWFsIjogIkRIMjUwMTgwMDIyIiwgImN1c3RvbWVyIjogIkdSQU5EIFNUT1JFUyBMLkwuQy4iLCAibW9kZWwiOiAiTVVMVEkgQ1VSUkVOQ1kgREVURUNUT1IgRFAgMjI4OCIsICJpbnZvaWNlIjogIjJJTDI1MDA1MTIiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDMwMDAuMH0sIHsic2VyaWFsIjogIkRIMjUwMTgwMDE2IiwgImN1c3RvbWVyIjogIkdSQU5EIFNUT1JFUyBMLkwuQy4iLCAibW9kZWwiOiAiTVVMVEkgQ1VSUkVOQ1kgREVURUNUT1IgRFAgMjI4OCIsICJpbnZvaWNlIjogIjJJTDI1MDA5MDIiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDMwMDAuMH0sIHsic2VyaWFsIjogIkRIMjUwMTgwMDE0IiwgImN1c3RvbWVyIjogIkdSQU5EIFNUT1JFUyBMLkwuQy4iLCAibW9kZWwiOiAiTVVMVEkgQ1VSUkVOQ1kgREVURUNUT1IgRFAgMjI4OCIsICJpbnZvaWNlIjogIjJJTDI1MDA5MDIiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDMwMDAuMH0sIHsic2VyaWFsIjogIkRIMjUwMTgwMDEzIiwgImN1c3RvbWVyIjogIkdSQU5EIFNUT1JFUyBMLkwuQy4iLCAibW9kZWwiOiAiTVVMVEkgQ1VSUkVOQ1kgREVURUNUT1IgRFAgMjI4OCIsICJpbnZvaWNlIjogIjJJTDI1MDA5MDIiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDMwMDAuMH0sIHsic2VyaWFsIjogIkRIMjUwNTIwMDA5IiwgImN1c3RvbWVyIjogIkdSQU5EIFNUT1JFUyBMLkwuQy4iLCAibW9kZWwiOiAiTVVMVEkgQ1VSUkVOQ1kgREVURUNUT1IgRFAgMjI4OCIsICJpbnZvaWNlIjogIjJJTDI1MDE0NTQiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDMwMDAuMH0sIHsic2VyaWFsIjogIkRIMjUwMTgwMDIwIiwgImN1c3RvbWVyIjogIkdSQU5EIFNUT1JFUyBMLkwuQy4iLCAibW9kZWwiOiAiTVVMVEkgQ1VSUkVOQ1kgREVURUNUT1IgRFAgMjI4OCIsICJpbnZvaWNlIjogIjJJTDI1MDE0NTQiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDMwMDAuMH0sIHsic2VyaWFsIjogIkRIMjUwMDcwMDQwIiwgImN1c3RvbWVyIjogIkdSQU5EIFNUT1JFUyBMLkwuQy4iLCAibW9kZWwiOiAiTVVMVEkgQ1VSUkVOQ1kgREVURUNUT1IgRFAgMjI4OCIsICJpbnZvaWNlIjogIjJJTDI1MDE0NTQiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDMwMDAuMH0sIHsic2VyaWFsIjogIkRIMjUwNTIwMDAyIiwgImN1c3RvbWVyIjogIkdSQU5EIFNUT1JFUyBMLkwuQy4iLCAibW9kZWwiOiAiTVVMVEkgQ1VSUkVOQ1kgREVURUNUT1IgRFAgMjI4OCIsICJpbnZvaWNlIjogIjJJTDI2MDA4NTAiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDMwMDAuMTJ9LCB7InNlcmlhbCI6ICJESDI1MDUyMDAwMyIsICJjdXN0b21lciI6ICJHUkFORCBTVE9SRVMgTC5MLkMuIiwgIm1vZGVsIjogIk1VTFRJIENVUlJFTkNZIERFVEVDVE9SIERQIDIyODgiLCAiaW52b2ljZSI6ICIySUwyNjAwODUwIiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiAzMDAwLjEyfSwgeyJzZXJpYWwiOiAiREgyNTA1MjAwMDQiLCAiY3VzdG9tZXIiOiAiR1JBTkQgU1RPUkVTIEwuTC5DLiIsICJtb2RlbCI6ICJNVUxUSSBDVVJSRU5DWSBERVRFQ1RPUiBEUCAyMjg4IiwgImludm9pY2UiOiAiMklMMjYwMDg1MCIsICJsb2NhdGlvbiI6ICJEVUJBSSBIRUFEIE9GRklDRSIsICJzcCI6ICJNdWhhbW1hZCBGYWlzYWwgSGFuaWYiLCAiYW1vdW50IjogMzAwMC4xMn0sIHsic2VyaWFsIjogIkRIMjUwMDcwMDM2IiwgImN1c3RvbWVyIjogIkpVTUJPIEVMRUNUUk9OSUNTIENPLkxURC5MTEMiLCAibW9kZWwiOiAiTVVMVEkgQ1VSUkVOQ1kgREVURUNUT1IgRFAgMjI4OCIsICJpbnZvaWNlIjogIjJJTDI1MDAwMDQiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDExNTAuMH0sIHsic2VyaWFsIjogIkRIMjUwMTgwMDIzIiwgImN1c3RvbWVyIjogIkpVTUJPIEVMRUNUUk9OSUNTIENPLkxURC5MTEMiLCAibW9kZWwiOiAiTVVMVEkgQ1VSUkVOQ1kgREVURUNUT1IgRFAgMjI4OCIsICJpbnZvaWNlIjogIjJJTDI1MDA0MDciLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDExNTAuMH0sIHsic2VyaWFsIjogIjMyMDAwMDAwMjUwOTFBMDA1MTIiLCAiY3VzdG9tZXIiOiAiSlVNQk8gRUxFQ1RST05JQ1MgQ08uTFRELkxMQyIsICJtb2RlbCI6ICIxLVBvY2tldCBiYW5rbm90ZSBDb3VudGVyIiwgImludm9pY2UiOiAiMklMMjUwMTY0NiIsICJsb2NhdGlvbiI6ICJEVUJBSSBIRUFEIE9GRklDRSIsICJzcCI6ICJNdWhhbW1hZCBGYWlzYWwgSGFuaWYiLCAiYW1vdW50IjogMjAwMC4wfSwgeyJzZXJpYWwiOiAiMzIwMDAwMDAyNTA5MUEwMDUwMyIsICJjdXN0b21lciI6ICJKVU1CTyBFTEVDVFJPTklDUyBDTy5MVEQuTExDIiwgIm1vZGVsIjogIjEtUG9ja2V0IGJhbmtub3RlIENvdW50ZXIiLCAiaW52b2ljZSI6ICIySUwyNTAxODU5IiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiAyMDUwLjB9LCB7InNlcmlhbCI6ICIwMTIyNTciLCAiY3VzdG9tZXIiOiAiQWwgTWFqaWQgTW90b3JzIENvLiBMLkwuQyIsICJtb2RlbCI6ICJDT01QQUNUIFRXTyBQT0NLRVQgRklULiBTT1JURVItTkMtNjUwMCIsICJpbnZvaWNlIjogIjJJTDI1MDA3NTYiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDUzNTAuMH0sIHsic2VyaWFsIjogIjAxMjI1NSIsICJjdXN0b21lciI6ICJBbCBNYWppZCBNb3RvcnMgQ28uIEwuTC5DIiwgIm1vZGVsIjogIkNPTVBBQ1QgVFdPIFBPQ0tFVCBGSVQuIFNPUlRFUi1OQy02NTAwIiwgImludm9pY2UiOiAiMklMMjUwMDc1OCIsICJsb2NhdGlvbiI6ICJEVUJBSSBIRUFEIE9GRklDRSIsICJzcCI6ICJNdWhhbW1hZCBGYWlzYWwgSGFuaWYiLCAiYW1vdW50IjogNTM1MC4wfSwgeyJzZXJpYWwiOiAiMDEyMjUzIiwgImN1c3RvbWVyIjogIkFsIE1hamlkIE1vdG9ycyBDby4gTC5MLkMiLCAibW9kZWwiOiAiQ09NUEFDVCBUV08gUE9DS0VUIEZJVC4gU09SVEVSLU5DLTY1MDAiLCAiaW52b2ljZSI6ICIySUwyNTAwNzU5IiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiA1MzUwLjB9LCB7InNlcmlhbCI6ICIwMTIyNTgiLCAiY3VzdG9tZXIiOiAiQWwgTWFqaWQgTW90b3JzIENvLiBMLkwuQyIsICJtb2RlbCI6ICJDT01QQUNUIFRXTyBQT0NLRVQgRklULiBTT1JURVItTkMtNjUwMCIsICJpbnZvaWNlIjogIjJJTDI1MDA3NjAiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDUzNTAuMH0sIHsic2VyaWFsIjogIjMyMDAwMDAwMjUwMTFBMDAyOTciLCAiY3VzdG9tZXIiOiAiQWwgTWFqaWQgTW90b3JzIENvLiBMLkwuQyIsICJtb2RlbCI6ICIxLVBvY2tldCBiYW5rbm90ZSBDb3VudGVyIiwgImludm9pY2UiOiAiMklMMjUwMDkwMSIsICJsb2NhdGlvbiI6ICJEVUJBSSBIRUFEIE9GRklDRSIsICJzcCI6ICJNdWhhbW1hZCBGYWlzYWwgSGFuaWYiLCAiYW1vdW50IjogMjUwMC4wfSwgeyJzZXJpYWwiOiAiMzIwMDAwMDAyNTAxMUEwMDMwNCIsICJjdXN0b21lciI6ICJBbCBNYWppZCBNb3RvcnMgQ28uIEwuTC5DIiwgIm1vZGVsIjogIjEtUG9ja2V0IGJhbmtub3RlIENvdW50ZXIiLCAiaW52b2ljZSI6ICIySUwyNTAwOTA1IiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiAyNTAwLjB9LCB7InNlcmlhbCI6ICIzMjAwMDAwMDI1MDExQTAwMjk3IiwgImN1c3RvbWVyIjogIkFsIE1hamlkIE1vdG9ycyBDby4gTC5MLkMiLCAibW9kZWwiOiAiMS1Qb2NrZXQgYmFua25vdGUgQ291bnRlciIsICJpbnZvaWNlIjogIjJJTDI1MDE0NTUiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDI1MDAuMH0sIHsic2VyaWFsIjogIjMyMDAwMDAwMjUwMTFBMDAzMDQiLCAiY3VzdG9tZXIiOiAiQWwgTWFqaWQgTW90b3JzIENvLiBMLkwuQyIsICJtb2RlbCI6ICIxLVBvY2tldCBiYW5rbm90ZSBDb3VudGVyIiwgImludm9pY2UiOiAiMklMMjUwMTQ1NiIsICJsb2NhdGlvbiI6ICJEVUJBSSBIRUFEIE9GRklDRSIsICJzcCI6ICJNdWhhbW1hZCBGYWlzYWwgSGFuaWYiLCAiYW1vdW50IjogMjUwMC4wfSwgeyJzZXJpYWwiOiAiMzIwMDAwMDAyNTAxMUEwMDI5NyIsICJjdXN0b21lciI6ICJBbCBNYWppZCBNb3RvcnMgQ28uIEwuTC5DIiwgIm1vZGVsIjogIjEtUG9ja2V0IGJhbmtub3RlIENvdW50ZXIiLCAiaW52b2ljZSI6ICIySVIyNTAwMDQzIiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiAtMjUwMC4wfSwgeyJzZXJpYWwiOiAiMzIwMDAwMDAyNTAxMUEwMDMwNCIsICJjdXN0b21lciI6ICJBbCBNYWppZCBNb3RvcnMgQ28uIEwuTC5DIiwgIm1vZGVsIjogIjEtUG9ja2V0IGJhbmtub3RlIENvdW50ZXIiLCAiaW52b2ljZSI6ICIySVIyNTAwMDQ0IiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiAtMjUwMC4wfSwgeyJzZXJpYWwiOiAiOTFGMDAwMDAyNTA3MUEwMDU1OCIsICJjdXN0b21lciI6ICJBbCBNYWppZCBNb3RvcnMgQ28uIEwuTC5DIiwgIm1vZGVsIjogIkJBTktOT1RFIENPVU5URVIiLCAiaW52b2ljZSI6ICIySUwyNjAwMTkyIiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiA0OTUwLjB9LCB7InNlcmlhbCI6ICI5MjAwMDAwMjQwODFBMDAwMzAiLCAiY3VzdG9tZXIiOiAiQUxGQSBFWENIQU5HRSIsICJtb2RlbCI6ICJIVC05MjAwKDIrMSBwb2NrZXQgYmFua25vdGUgc29ydGVyKSBHIiwgImludm9pY2UiOiAiMklMMjUwMDMzOSIsICJsb2NhdGlvbiI6ICJEVUJBSSBIRUFEIE9GRklDRSIsICJzcCI6ICJNdWhhbW1hZCBGYWlzYWwgSGFuaWYiLCAiYW1vdW50IjogODg1MC4wfSwgeyJzZXJpYWwiOiAiOTErMDAwMDAyNTA1MUEwMDQ4NiIsICJjdXN0b21lciI6ICJEVUJBSSBQT0xJQ0UgR0VORVJBTCBILlEuIiwgIm1vZGVsIjogIkJBTksgTk9URSBTT1JURVIiLCAiaW52b2ljZSI6ICIySUwyNTAwMzMwIiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiA2NTAwLjB9LCB7InNlcmlhbCI6ICI5MSswMDAwMDI1MDcxQTAwNTUxIiwgImN1c3RvbWVyIjogIk5BVElPTkFMIEJBTksgT0YgRlVKQUlSQUggUEpTQyIsICJtb2RlbCI6ICJBQ1JPUFJJTlQgRVM5MDAgVElNRSBSRUNPUkRFUiAoMjQwVikiLCAiaW52b2ljZSI6ICIySUwyNTAxNjgwIiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiAxODAwLjB9LCB7InNlcmlhbCI6ICI5MSswMDAwMDI1MDcxQTAwNTUzIiwgImN1c3RvbWVyIjogIk5BVElPTkFMIEJBTksgT0YgRlVKQUlSQUggUEpTQyIsICJtb2RlbCI6ICJBQ1JPUFJJTlQgRVM5MDAgVElNRSBSRUNPUkRFUiAoMjQwVikiLCAiaW52b2ljZSI6ICIySUwyNTAxNjgwIiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiAxODAwLjB9LCB7InNlcmlhbCI6ICI5MSswMDAwMDI1MDcxQTAwNTQ2IiwgImN1c3RvbWVyIjogIk5BVElPTkFMIEJBTksgT0YgRlVKQUlSQUggUEpTQyIsICJtb2RlbCI6ICJBQ1JPUFJJTlQgRVM5MDAgVElNRSBSRUNPUkRFUiAoMjQwVikiLCAiaW52b2ljZSI6ICIySUwyNTAxNjgwIiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiAxODAwLjB9LCB7InNlcmlhbCI6ICIwMTAyMDkwMDAyMDgyMjc2QUciLCAiY3VzdG9tZXIiOiAiTkFUSU9OQUwgQkFOSyBPRiBGVUpBSVJBSCBQSlNDIiwgIm1vZGVsIjogIkFDUk9QUklOVCBFUzkwMCBUSU1FIFJFQ09SREVSICgyNDBWKSIsICJpbnZvaWNlIjogIjJJTDI1MDE2ODAiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDE4MDAuMH0sIHsic2VyaWFsIjogIjA4NjE4MyIsICJjdXN0b21lciI6ICJOQVRJT05BTCBCQU5LIE9GIEZVSkFJUkFIIFBKU0MiLCAibW9kZWwiOiAiQUNST1BSSU5UIEVTOTAwIFRJTUUgUkVDT1JERVIgKDI0MFYpIiwgImludm9pY2UiOiAiMklMMjUwMTY4MCIsICJsb2NhdGlvbiI6ICJEVUJBSSBIRUFEIE9GRklDRSIsICJzcCI6ICJNdWhhbW1hZCBGYWlzYWwgSGFuaWYiLCAiYW1vdW50IjogMTgwMC4wfSwgeyJzZXJpYWwiOiAiMDg2MTg0IiwgImN1c3RvbWVyIjogIk5BVElPTkFMIEJBTksgT0YgRlVKQUlSQUggUEpTQyIsICJtb2RlbCI6ICJBQ1JPUFJJTlQgRVM5MDAgVElNRSBSRUNPUkRFUiAoMjQwVikiLCAiaW52b2ljZSI6ICIySUwyNTAxNjgwIiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiAxODAwLjB9LCB7InNlcmlhbCI6ICIwODYxODUiLCAiY3VzdG9tZXIiOiAiTkFUSU9OQUwgQkFOSyBPRiBGVUpBSVJBSCBQSlNDIiwgIm1vZGVsIjogIkFDUk9QUklOVCBFUzkwMCBUSU1FIFJFQ09SREVSICgyNDBWKSIsICJpbnZvaWNlIjogIjJJTDI1MDE2ODAiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDE4MDAuMH0sIHsic2VyaWFsIjogIjAxMDIwOTAwMDIwODIyNzhBRyIsICJjdXN0b21lciI6ICJOQVRJT05BTCBCQU5LIE9GIEZVSkFJUkFIIFBKU0MiLCAibW9kZWwiOiAiQUNST1BSSU5UIEVTOTAwIFRJTUUgUkVDT1JERVIgKDI0MFYpIiwgImludm9pY2UiOiAiMklMMjYwMDM4NSIsICJsb2NhdGlvbiI6ICJEVUJBSSBIRUFEIE9GRklDRSIsICJzcCI6ICJNdWhhbW1hZCBGYWlzYWwgSGFuaWYiLCAiYW1vdW50IjogMTgwMC4wfSwgeyJzZXJpYWwiOiAiMDg2NDAzIiwgImN1c3RvbWVyIjogIk5BVElPTkFMIEJBTksgT0YgRlVKQUlSQUggUEpTQyIsICJtb2RlbCI6ICJET1JTIDEyNSBVTFRSQVZJT0xFVCBERVRFQ1RPUiIsICJpbnZvaWNlIjogIjJJTDI1MDE0OTAiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDEwMDAuMH0sIHsic2VyaWFsIjogIjA4NjQwNyIsICJjdXN0b21lciI6ICJOQVRJT05BTCBCQU5LIE9GIEZVSkFJUkFIIFBKU0MiLCAibW9kZWwiOiAiRE9SUyAxMjUgVUxUUkFWSU9MRVQgREVURUNUT1IiLCAiaW52b2ljZSI6ICIySUwyNTAxNDkwIiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiAxMDAwLjB9LCB7InNlcmlhbCI6ICIwODY0MDIiLCAiY3VzdG9tZXIiOiAiTkFUSU9OQUwgQkFOSyBPRiBGVUpBSVJBSCBQSlNDIiwgIm1vZGVsIjogIkRPUlMgMTI1IFVMVFJBVklPTEVUIERFVEVDVE9SIiwgImludm9pY2UiOiAiMklMMjUwMTQ5MCIsICJsb2NhdGlvbiI6ICJEVUJBSSBIRUFEIE9GRklDRSIsICJzcCI6ICJNdWhhbW1hZCBGYWlzYWwgSGFuaWYiLCAiYW1vdW50IjogMTAwMC4wfSwgeyJzZXJpYWwiOiAiMDg2NDA0IiwgImN1c3RvbWVyIjogIk5BVElPTkFMIEJBTksgT0YgRlVKQUlSQUggUEpTQyIsICJtb2RlbCI6ICJET1JTIDEyNSBVTFRSQVZJT0xFVCBERVRFQ1RPUiIsICJpbnZvaWNlIjogIjJJTDI1MDE0OTAiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDEwMDAuMH0sIHsic2VyaWFsIjogIjkxRjAwMDAwMjUwNTFBMDA0MDciLCAiY3VzdG9tZXIiOiAiU0hBUkFGIFNISVBQSU5HIEFHRU5DWSBMTEMiLCAibW9kZWwiOiAiQkFOS05PVEUgQ09VTlRFUiIsICJpbnZvaWNlIjogIjJJTDI1MDA1MDAiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDUwNTAuMH0sIHsic2VyaWFsIjogIjkxRjAwMDAwMjUwNTFBMDA0MTEiLCAiY3VzdG9tZXIiOiAiU0FVREkgU05BQ0sgRk9PRFMgQ08uIExURCAoUEVQU0lDTykiLCAibW9kZWwiOiAiQkFOS05PVEUgQ09VTlRFUiIsICJpbnZvaWNlIjogIjJJTDI1MDA1NDUiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDI0MjUwLjB9LCB7InNlcmlhbCI6ICI5MSswMDAwMDI2MDExQTAwNzQ2IiwgImN1c3RvbWVyIjogIkdBUkdBU0ggTU9UT1JTICYgR0VORVJBTCBUUkFESU5HIExMQyIsICJtb2RlbCI6ICJCQU5LIE5PVEUgU09SVEVSIiwgImludm9pY2UiOiAiMklMMjYwMDU2NCIsICJsb2NhdGlvbiI6ICJEVUJBSSBIRUFEIE9GRklDRSIsICJzcCI6ICJNdWhhbW1hZCBGYWlzYWwgSGFuaWYiLCAiYW1vdW50IjogNjEwMC4wfSwgeyJzZXJpYWwiOiAiMDg2NDA2IiwgImN1c3RvbWVyIjogIkNPU0NPIFNISVBQSU5HIExJTkVTIEVNSVJBVEVTIExMQyIsICJtb2RlbCI6ICJET1JTIDEyNSBVTFRSQVZJT0xFVCBERVRFQ1RPUiIsICJpbnZvaWNlIjogIjJJTDI1MDEzNTEiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDUwMC4wfSwgeyJzZXJpYWwiOiAiREgyNTAxODAwMTIiLCAiY3VzdG9tZXIiOiAiQkVTSURFIFRSQURJTkcgQ08gTC5MLkMiLCAibW9kZWwiOiAiTVVMVEkgQ1VSUkVOQ1kgREVURUNUT1IgRFAgMjI4OCIsICJpbnZvaWNlIjogIjJJTDI1MDEwNTgiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDIwMDAuMH0sIHsic2VyaWFsIjogIkRIMjUwNTIwMDEyIiwgImN1c3RvbWVyIjogIkJFU0lERSBUUkFESU5HIENPIEwuTC5DIiwgIm1vZGVsIjogIk1VTFRJIENVUlJFTkNZIERFVEVDVE9SIERQIDIyODgiLCAiaW52b2ljZSI6ICIySUwyNTAxNTMwIiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiAxMDAwLjB9LCB7InNlcmlhbCI6ICIzMjAwMDAwMDI1MDExQTAwMjg0IiwgImN1c3RvbWVyIjogIkNIQU5FTCBMLkwuQyIsICJtb2RlbCI6ICIxLVBvY2tldCBiYW5rbm90ZSBDb3VudGVyIiwgImludm9pY2UiOiAiMklMMjUwMDAyNSIsICJsb2NhdGlvbiI6ICJEVUJBSSBIRUFEIE9GRklDRSIsICJzcCI6ICJNdWhhbW1hZCBGYWlzYWwgSGFuaWYiLCAiYW1vdW50IjogMjUwMC4wfSwgeyJzZXJpYWwiOiAiMzIwMDAwMDAyNTAxMUEwMDMwMyIsICJjdXN0b21lciI6ICJDSEFORUwgTC5MLkMiLCAibW9kZWwiOiAiMS1Qb2NrZXQgYmFua25vdGUgQ291bnRlciIsICJpbnZvaWNlIjogIjJJTDI1MDEwODciLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDI1MDAuMH0sIHsic2VyaWFsIjogIjMyMDAwMDAwMjUwMTFBMDAyODYiLCAiY3VzdG9tZXIiOiAiQ0hBTkVMIEwuTC5DIiwgIm1vZGVsIjogIjEtUG9ja2V0IGJhbmtub3RlIENvdW50ZXIiLCAiaW52b2ljZSI6ICIyU0kyNTAwODI5IiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiAyNTAwLjB9LCB7InNlcmlhbCI6ICIzMjAwMDAwMDI1MDExQTAwMjkwIiwgImN1c3RvbWVyIjogIlNBQkFIIEFMS0hBSVIgTU9ORVRBUlkgJiBCQU5LSU5HIEVRVUlQTUVOVCBUUkFESU5HIExMQyIsICJtb2RlbCI6ICIxLVBvY2tldCBiYW5rbm90ZSBDb3VudGVyIiwgImludm9pY2UiOiAiMklMMjUwMDkwOSIsICJsb2NhdGlvbiI6ICJEVUJBSSBIRUFEIE9GRklDRSIsICJzcCI6ICJNdWhhbW1hZCBGYWlzYWwgSGFuaWYiLCAiYW1vdW50IjogMTc1MC4wfSwgeyJzZXJpYWwiOiAiREgyNTAxODAwMTAiLCAiY3VzdG9tZXIiOiAiS0lOT0tVTklZQSBCT09LIFNUT1JFUyBPRiBTSU5HQVBPUkUgUFRFIExURCAoRFVCQUkgQlIuKSIsICJtb2RlbCI6ICJNVUxUSSBDVVJSRU5DWSBERVRFQ1RPUiBEUCAyMjg4IiwgImludm9pY2UiOiAiMklMMjUwMDkxMSIsICJsb2NhdGlvbiI6ICJEVUJBSSBIRUFEIE9GRklDRSIsICJzcCI6ICJNdWhhbW1hZCBGYWlzYWwgSGFuaWYiLCAiYW1vdW50IjogMjAwMC4wfSwgeyJzZXJpYWwiOiAiMzIwMDAwMDAyNTAxMUEwMDI5NSIsICJjdXN0b21lciI6ICJKVU1BIEFMTUFKSUQgSE9MRElORyBHUk9VUCBMTEMiLCAibW9kZWwiOiAiMS1Qb2NrZXQgYmFua25vdGUgQ291bnRlciIsICJpbnZvaWNlIjogIjJJTDI1MDEyNjYiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDIwMDAuMH0sIHsic2VyaWFsIjogIjkxRjAwMDAwMjUwNzFBMDA1NTUiLCAiY3VzdG9tZXIiOiAiQUwgRlVUVEFJTSBFTEVDVFJJQyBWRUhJQ0xFIENPIEwuTC5DIiwgIm1vZGVsIjogIkJBTktOT1RFIENPVU5URVIiLCAiaW52b2ljZSI6ICIySUwyNTAxNjEzIiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiA1NTAwLjB9LCB7InNlcmlhbCI6ICI5MUYwMDAwMDI1MDcxQTAwNTUyIiwgImN1c3RvbWVyIjogIkFMIEZVVFRBSU0gRUxFQ1RSSUMgVkVISUNMRSBDTyBMLkwuQyIsICJtb2RlbCI6ICJCQU5LTk9URSBDT1VOVEVSIiwgImludm9pY2UiOiAiMklMMjYwMDY0NSIsICJsb2NhdGlvbiI6ICJEVUJBSSBIRUFEIE9GRklDRSIsICJzcCI6ICJNdWhhbW1hZCBGYWlzYWwgSGFuaWYiLCAiYW1vdW50IjogNTUwMC4wfSwgeyJzZXJpYWwiOiAiOTIwMDAwMDI0MDUxQTAwMDI4IiwgImN1c3RvbWVyIjogIlBBWU5FVCBQQVlNRU5UIFNFUlZJQ0VTIFBST1ZJREVSIExMQyIsICJtb2RlbCI6ICJIVC05MjAwKDIrMSBwb2NrZXQgYmFua25vdGUgc29ydGVyKSIsICJpbnZvaWNlIjogIjJJTDI1MDA1OTMiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDkzNTAuMH0sIHsic2VyaWFsIjogIjMyMDAwMDAwMjUwOTFBMDA1MDciLCAiY3VzdG9tZXIiOiAiSlVNQSBBTCBNQUpJRCBDTy4gTExDIiwgIm1vZGVsIjogIjEtUG9ja2V0IGJhbmtub3RlIENvdW50ZXIiLCAiaW52b2ljZSI6ICIySUwyNTAxOTg2IiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiAyMDUwLjB9LCB7InNlcmlhbCI6ICI5MSswMDAwMDI2MDExQTAwNzQzIiwgImN1c3RvbWVyIjogIkpVTUEgQUwgTUFKSUQgQ08uIExMQyIsICJtb2RlbCI6ICJCQU5LIE5PVEUgU09SVEVSIiwgImludm9pY2UiOiAiMklMMjYwMDY4NiIsICJsb2NhdGlvbiI6ICJEVUJBSSBIRUFEIE9GRklDRSIsICJzcCI6ICJNdWhhbW1hZCBGYWlzYWwgSGFuaWYiLCAiYW1vdW50IjogMTIzMDAuMH0sIHsic2VyaWFsIjogIjkxRjAwMDAwMjUwNzFBMDA1NTEiLCAiY3VzdG9tZXIiOiAiSlVNQSBBTCBNQUpJRCBDTy4gTExDIiwgIm1vZGVsIjogIkJBTktOT1RFIENPVU5URVIiLCAiaW52b2ljZSI6ICIySUwyNjAwMTM3IiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiA0OTUwLjB9LCB7InNlcmlhbCI6ICI5MSswMDAwMDI1MDcxQTAwNTQ4IiwgImN1c3RvbWVyIjogIlBFTlRBU09MVVRJT04gSVQgSU5GUkFTVFJVQ1RVUkUgTC5MLkMgUy5PLkMiLCAibW9kZWwiOiAiQkFOSyBOT1RFIFNPUlRFUiIsICJpbnZvaWNlIjogIjJJTDI2MDAxNjAiLCAibG9jYXRpb24iOiAiREVNTyIsICJzcCI6ICJNdWhhbW1hZCBGYWlzYWwgSGFuaWYiLCAiYW1vdW50IjogNTYwMC4wfSwgeyJzZXJpYWwiOiAiOTErMDAwMDAyNTA3MUEwMDUzNiIsICJjdXN0b21lciI6ICJBTUFOIFRBWEkgTExDIiwgIm1vZGVsIjogIkJBTksgTk9URSBTT1JURVIiLCAiaW52b2ljZSI6ICIySUwyNTAxMjYwIiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiA2NTAwLjB9LCB7InNlcmlhbCI6ICIzMjAwMDAwMDI1MDExQTAwMjkxIiwgImN1c3RvbWVyIjogIkNBUkxUT04gRE9XTiBUT1dOIEhPVEVMIExMQyIsICJtb2RlbCI6ICIxLVBvY2tldCBiYW5rbm90ZSBDb3VudGVyIiwgImludm9pY2UiOiAiMklMMjUwMDEwNSIsICJsb2NhdGlvbiI6ICJEVUJBSSBIRUFEIE9GRklDRSIsICJzcCI6ICJNdWhhbW1hZCBGYWlzYWwgSGFuaWYiLCAiYW1vdW50IjogMjAwMC4wfSwgeyJzZXJpYWwiOiAiOTErMDAwMDAyNTA1MUEwMDQ4MSIsICJjdXN0b21lciI6ICJWIEYgVCBJIERPQ1VNRU5UIENMRUFSSU5HIFNFUlZJQ0VTIEwuTC5DIiwgIm1vZGVsIjogIkJBTksgTk9URSBTT1JURVIiLCAiaW52b2ljZSI6ICIySUwyNTAwMzMxIiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiAxODAwMC4wfSwgeyJzZXJpYWwiOiAiOTErMDAwMDAyNTA1MUEwMDQ4NyIsICJjdXN0b21lciI6ICJWIEYgVCBJIERPQ1VNRU5UIENMRUFSSU5HIFNFUlZJQ0VTIEwuTC5DIiwgIm1vZGVsIjogIkJBTksgTk9URSBTT1JURVIiLCAiaW52b2ljZSI6ICIySUwyNTAwMzMxIiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiAxODAwMC4wfSwgeyJzZXJpYWwiOiAiOTErMDAwMDAyNTA1MUEwMDQ3OSIsICJjdXN0b21lciI6ICJWIEYgVCBJIERPQ1VNRU5UIENMRUFSSU5HIFNFUlZJQ0VTIEwuTC5DIiwgIm1vZGVsIjogIkJBTksgTk9URSBTT1JURVIiLCAiaW52b2ljZSI6ICIySUwyNTAwMzMxIiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiAxODAwMC4wfSwgeyJzZXJpYWwiOiAiOTErMDAwMDAyNTA1MUEwMDQ4NSIsICJjdXN0b21lciI6ICJWRlMgKEdDQyApIChMLkwuQykiLCAibW9kZWwiOiAiQkFOSyBOT1RFIFNPUlRFUiIsICJpbnZvaWNlIjogIjJJTDI1MDAzMzIiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDYwMDAuMH0sIHsic2VyaWFsIjogIjkxKzAwMDAwMjUwNzFBMDA1NDAiLCAiY3VzdG9tZXIiOiAiVkZTIChHQ0MgKSAoTC5MLkMpIiwgIm1vZGVsIjogIkJBTksgTk9URSBTT1JURVIiLCAiaW52b2ljZSI6ICIySUwyNjAwMzk4IiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiA2ODUwLjB9LCB7InNlcmlhbCI6ICI5MUYwMDAwMDI1MDUxQTAwNDEyIiwgImN1c3RvbWVyIjogIkFMU0hBSEVFTiBBTFRIQVFFQiBHRU5FUkFMIFRSQURJTkcgTExDIiwgIm1vZGVsIjogIkJBTktOT1RFIENPVU5URVIiLCAiaW52b2ljZSI6ICIySUwyNTAwNTYwIiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiA0ODUwLjB9LCB7InNlcmlhbCI6ICI5MUYwMDAwMDI0MDgxQTAwMTQ0IiwgImN1c3RvbWVyIjogIkFMU0hBSEVFTiBBTFRIQVFFQiBHRU5FUkFMIFRSQURJTkcgTExDIiwgIm1vZGVsIjogIkJBTktOT1RFIENPVU5URVIgKEcpIiwgImludm9pY2UiOiAiMklMMjUwMDQxMiIsICJsb2NhdGlvbiI6ICJEVUJBSSBIRUFEIE9GRklDRSIsICJzcCI6ICJNdWhhbW1hZCBGYWlzYWwgSGFuaWYiLCAiYW1vdW50IjogNDg1MC4wfSwgeyJzZXJpYWwiOiAiMzIwMDAwMDAyNTAxMUEwMDI5MiIsICJjdXN0b21lciI6ICJNT05JIEpFV0VMTEVSUyAuTExDIiwgIm1vZGVsIjogIjEtUG9ja2V0IGJhbmtub3RlIENvdW50ZXIiLCAiaW52b2ljZSI6ICIySUwyNTAwODAwIiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiAyMDAwLjB9LCB7InNlcmlhbCI6ICI5MSswMDAwMDI1MDcxQTAwNTM3IiwgImN1c3RvbWVyIjogIk1ha2FuYSBUZWNobm9sb2dpZXMgTFREIiwgIm1vZGVsIjogIkJBTksgTk9URSBTT1JURVIiLCAiaW52b2ljZSI6ICIySUwyNTAxMjk5IiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiA2NTAwLjB9LCB7InNlcmlhbCI6ICI5MSswMDAwMDI1MDcxQTAwNTMzIiwgImN1c3RvbWVyIjogIlNUVURJTyBFVkVOVCBNQU5BR0VNRU5UIEwuTC5DIiwgIm1vZGVsIjogIkJBTksgTk9URSBTT1JURVIiLCAiaW52b2ljZSI6ICIySUwyNTAxNjEwIiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiA2NTAwLjB9LCB7InNlcmlhbCI6ICIzMjAwMDAwMDI1MDkxQTAwNTA1IiwgImN1c3RvbWVyIjogIkFMIEJVU1RBTiBSRVNVREVOQ0UgTC5MLkMuIiwgIm1vZGVsIjogIjEtUG9ja2V0IGJhbmtub3RlIENvdW50ZXIiLCAiaW52b2ljZSI6ICIySUwyNTAxNjQyIiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiAyNTAwLjB9LCB7InNlcmlhbCI6ICIyNTA1MDA1IiwgImN1c3RvbWVyIjogIkFMIFJBSVMgQ0FSR08gQUdFTkNJRVMgTC5MLkMuIiwgIm1vZGVsIjogIkNXLTE2MDAgRUxFQ1RST05JQyBDSEVRVUUgV1JJVEVSIiwgImludm9pY2UiOiAiMklMMjUwMTkwOSIsICJsb2NhdGlvbiI6ICJEVUJBSSBIRUFEIE9GRklDRSIsICJzcCI6ICJNdWhhbW1hZCBGYWlzYWwgSGFuaWYiLCAiYW1vdW50IjogMTE1MC4wfSwgeyJzZXJpYWwiOiAiMDEwMjA5MDAwMjA4MjI3NUFHIiwgImN1c3RvbWVyIjogIklOVEVSTkFUSU9OQUwgREVWRUxPUE1FTlQgQkFOSyBGT1IgSU5WRVNUTUVOVCBBTkQgRklOQU5DRSAtIERVQkFJIEJSQU5DSCIsICJtb2RlbCI6ICJBQ1JPUFJJTlQgRVM5MDAgVElNRSBSRUNPUkRFUiAoMjQwVikiLCAiaW52b2ljZSI6ICIySUwyNjAwNzkwIiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiAxODUwLjB9LCB7InNlcmlhbCI6ICI5MSswMDAwMDI2MDExQTAwNzQ5IiwgImN1c3RvbWVyIjogIklOVEVSTkFUSU9OQUwgREVWRUxPUE1FTlQgQkFOSyBGT1IgSU5WRVNUTUVOVCBBTkQgRklOQU5DRSAtIERVQkFJIEJSQU5DSCIsICJtb2RlbCI6ICJCQU5LIE5PVEUgU09SVEVSIiwgImludm9pY2UiOiAiMklMMjYwMDMwOCIsICJsb2NhdGlvbiI6ICJEVUJBSSBIRUFEIE9GRklDRSIsICJzcCI6ICJNdWhhbW1hZCBGYWlzYWwgSGFuaWYiLCAiYW1vdW50IjogNjUwMC4wfSwgeyJzZXJpYWwiOiAiOTErMDAwMDAyNjAxMUEwMDc0NSIsICJjdXN0b21lciI6ICJCQUhXQU4gQVVUT01PQklMRVMgQU5EIFRSQURJTkcgRlpDTyIsICJtb2RlbCI6ICJCQU5LIE5PVEUgU09SVEVSIiwgImludm9pY2UiOiAiMklMMjYwMDU3MSIsICJsb2NhdGlvbiI6ICJEVUJBSSBIRUFEIE9GRklDRSIsICJzcCI6ICJNdWhhbW1hZCBGYWlzYWwgSGFuaWYiLCAiYW1vdW50IjogNjEwMC4wfSwgeyJzZXJpYWwiOiAiOTErMDAwMDAyNjAxMUEwMDc0NCIsICJjdXN0b21lciI6ICJBTCBNQVdBUklEIFJFQUwgRVNUQVRFIEFORCBJTlZFU1RNRU5UIENPLkxMQyIsICJtb2RlbCI6ICJCQU5LIE5PVEUgU09SVEVSIiwgImludm9pY2UiOiAiMklMMjYwMDc2MiIsICJsb2NhdGlvbiI6ICJEVUJBSSBIRUFEIE9GRklDRSIsICJzcCI6ICJNdWhhbW1hZCBGYWlzYWwgSGFuaWYiLCAiYW1vdW50IjogNjMwMC4wfSwgeyJzZXJpYWwiOiAiMzIwMDAwMDAyNjAxMUEwMDU3NSIsICJjdXN0b21lciI6ICJBTCBNVUhBUklLIEFMIFNBUkVFIFVTRUQgQVVUTyBTUEFSRSBQQVJUUyAmIFJFUVVJU0lURVMgVFJBRElORyBDTy4gTC5MLkMiLCAibW9kZWwiOiAiMS1Qb2NrZXQgYmFua25vdGUgQ291bnRlciIsICJpbnZvaWNlIjogIjJJTDI2MDA3NzUiLCAibG9jYXRpb24iOiAiRFVCQUkgSEVBRCBPRkZJQ0UiLCAic3AiOiAiTXVoYW1tYWQgRmFpc2FsIEhhbmlmIiwgImFtb3VudCI6IDIzODAuOTV9LCB7InNlcmlhbCI6ICI5MUYwMDAwMDI1MDcxQTAwNTU5IiwgImN1c3RvbWVyIjogIkRJQUIgQUxBTlpJIFJFQUwgRVNUQVRFIExMQy4gUyBQIiwgIm1vZGVsIjogIkJBTktOT1RFIENPVU5URVIiLCAiaW52b2ljZSI6ICIySUwyNjAwODAzIiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiA1MzAwLjB9LCB7InNlcmlhbCI6ICI5MSswMDAwMDI2MDExQTAwNzQ4IiwgImN1c3RvbWVyIjogIkZVSkFJUkFIIE5BVFVSQUwgUkVTT1VSQ0VTIENPUlBPUkFUSU9OIiwgIm1vZGVsIjogIkJBTksgTk9URSBTT1JURVIiLCAiaW52b2ljZSI6ICIySUwyNjAwODY5IiwgImxvY2F0aW9uIjogIkRVQkFJIEhFQUQgT0ZGSUNFIiwgInNwIjogIk11aGFtbWFkIEZhaXNhbCBIYW5pZiIsICJhbW91bnQiOiAxMzAwMC4wfSwgeyJzZXJpYWwiOiAiOTErMDAwMDAyNjAxMUEwMDc0MiIsICJjdXN0b21lciI6ICJGVUpBSVJBSCBOQVRVUkFMIFJFU09VUkNFUyBDT1JQT1JBVElPTiIsICJtb2RlbCI6ICJCQU5LIE5PVEUgU09SVEVSIiwgImludm9pY2UiOiAiMklMMjYwMDg2OSIsICJsb2NhdGlvbiI6ICJEVUJBSSBIRUFEIE9GRklDRSIsICJzcCI6ICJNdWhhbW1hZCBGYWlzYWwgSGFuaWYiLCAiYW1vdW50IjogMTMwMDAuMH1d";
+
+var AA_DATA = [];
+var ERP_DATA = [];
+var HUB_SERIALS = [];
+var updateResults = [];
+var erpResults = [];
+var currentAMCData = [];
+var currentERPData = [];
+
+function decodeB64(b64) {
+  var raw = atob(b64);
+  var bytes = new Uint8Array(raw.length);
+  for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+  return JSON.parse(new TextDecoder('utf-8').decode(bytes));
+}
+
+function init() {
+  document.getElementById('topDate').textContent = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  AA_DATA = decodeB64(AA_B64);
+  ERP_DATA = decodeB64(ERP_B64);
+
+  currentAMCData = AA_DATA;
+  currentERPData = ERP_DATA;
+
+  renderAMCTable(currentAMCData);
+  renderERPTable(currentERPData);
+  updateAMCSummary(currentAMCData);
+}
+
+function showPanel(id) {
+  document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('on'); });
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('on'); });
+  document.getElementById('panel-' + id).classList.add('on');
+  event.target.classList.add('on');
+}
+
+// ── AMC TABLE ──────────────────────────────────────────────────────────────
+function updateAMCSummary(data) {
+  var scrap = data.filter(function(r){ return r.remarks && (r.remarks.toLowerCase().includes('scrap') || r.remarks.toLowerCase().includes('remove')); });
+  var matched = data.filter(function(r){ return HUB_SERIALS.includes(r.serial); });
+  var newM = data.filter(function(r){ return !HUB_SERIALS.includes(r.serial) && !(r.remarks && r.remarks.toLowerCase().includes('scrap')); });
+
+  document.getElementById('aa-total').textContent = data.length;
+  document.getElementById('aa-matched').textContent = matched.length || data.length; // show all as matched if no hub data loaded
+  document.getElementById('aa-new').textContent = newM.length;
+  document.getElementById('aa-scrap').textContent = scrap.length;
+
+  if (scrap.length) {
+    document.getElementById('scrapAlert').style.display = 'block';
+    document.getElementById('scrapMsg').innerHTML = scrap.map(function(r){
+      return '⚠️ <strong>Serial ' + r.serial + '</strong> (' + r.model + ' — ' + r.location + ')<br><span style="font-size:12px">' + r.remarks + '</span>';
+    }).join('<br><br>');
+  }
+}
+
+function renderAMCTable(data) {
+  document.getElementById('amcTblCnt').textContent = data.length + ' machines';
+  var html = '';
+  data.forEach(function(r) {
+    var isScrap = r.remarks && (r.remarks.toLowerCase().includes('scrap') || r.remarks.toLowerCase().includes('remove'));
+    var isNew = !HUB_SERIALS.includes(r.serial) && !isScrap;
+    var statusBadge = isScrap
+      ? '<span class="badge b-scrap">⚠ Scrap/Remove</span>'
+      : isNew
+        ? '<span class="badge b-new">🆕 Not in Hub</span>'
+        : '<span class="badge b-match">✓ In Hub</span>';
+    html += '<tr' + (isScrap ? ' style="opacity:.6"' : '') + '>'
+      + '<td class="mono">' + r.serial + '</td>'
+      + '<td class="mono">' + r.model + '</td>'
+      + '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)">' + r.location + '</td>'
+      + '<td class="mono" style="color:#6ee7b7">' + fmtD(r.start_date) + '</td>'
+      + '<td class="mono" style="color:#fcd34d">' + fmtD(r.end_date) + '</td>'
+      + '<td>' + statusBadge + '</td>'
+      + '<td style="font-size:11px;color:' + (isScrap ? '#fca5a5' : 'var(--text3)') + '">' + (r.remarks || '—') + '</td>'
+      + '</tr>';
+  });
+  document.getElementById('amcTbl').innerHTML = html;
+}
+
+function runAMCUpdate() {
+  var updated = 0, skipped = 0, newMachines = [];
+  var results = [];
+  currentAMCData.forEach(function(r) {
+    var isScrap = r.remarks && (r.remarks.toLowerCase().includes('scrap') || r.remarks.toLowerCase().includes('remove'));
+    if (isScrap) { results.push({...r, result: 'scrap'}); skipped++; return; }
+    updated++;
+    results.push({...r, result: 'updated'});
+    if (!HUB_SERIALS.includes(r.serial)) newMachines.push(r);
+  });
+  updateResults = results;
+
+  // Show result summary
+  var html = '<div class="result-section">'
+    + '<div class="rs-title rs-ok">✓ ' + updated + ' Machines Updated</div>'
+    + '<div class="tbl-wrap"><div class="tbl-scroll"><table>'
+    + '<thead><tr><th>Serial</th><th>Model</th><th>Location</th><th>New Start Date</th><th>New End Date</th><th>Result</th></tr></thead><tbody>';
+  results.forEach(function(r) {
+    var rc = r.result === 'updated' ? 'b-match' : 'b-scrap';
+    var rl = r.result === 'updated' ? '✓ Updated' : '⚠ Scrap';
+    html += '<tr><td class="mono">' + r.serial + '</td><td class="mono">' + r.model + '</td>'
+      + '<td style="color:var(--text2);font-size:12px">' + r.location + '</td>'
+      + '<td class="mono" style="color:#6ee7b7">' + fmtD(r.start_date) + '</td>'
+      + '<td class="mono" style="color:#fcd34d">' + fmtD(r.end_date) + '</td>'
+      + '<td><span class="badge ' + rc + '">' + rl + '</span></td></tr>';
+  });
+  html += '</tbody></table></div></div></div>';
+
+  if (newMachines.length) {
+    html += '<div class="result-section"><div class="rs-title rs-new">🆕 ' + newMachines.length + ' New Machines — Add to Hub</div>';
+    newMachines.forEach(function(r) {
+      html += '<div class="alert alert-info" style="margin-bottom:8px">Serial: <strong>' + r.serial + '</strong> | Model: <strong>' + r.model + '</strong> | Location: ' + r.location + '</div>';
+    });
+    html += '</div>';
+  }
+  html += '<div class="alert alert-ok">✅ Done! Export the result below and import into Machine Hub using the Import vServe button.</div>';
+
+  document.getElementById('amcResultArea').innerHTML = html;
+  showToast('Updated ' + updated + ' machines — ' + skipped + ' skipped', 'ok');
+}
+
+function exportAMCResult() {
+  var data = updateResults.length ? updateResults : currentAMCData;
+  var rows = [['Serial No','Model','Location','Start Date','End Date','Amount (AED)','Remarks','Result']];
+  data.forEach(function(r) {
+    rows.push([r.serial, r.model, r.location, r.start_date, r.end_date, r.amount, r.remarks, r.result || 'pending']);
+  });
+  var wb = XLSX.utils.book_new();
+  var ws = XLSX.utils.aoa_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, 'AMC Update');
+  XLSX.writeFile(wb, 'AlAnsari_AMC_Update_' + new Date().toISOString().split('T')[0] + '.xlsx');
+  showToast('Exported AMC result', 'ok');
+}
+
+// ── ERP TABLE ──────────────────────────────────────────────────────────────
+function renderERPTable(data) {
+  document.getElementById('erpTblCnt').textContent = data.length + ' records';
+  var html = '';
+  data.forEach(function(r) {
+    var isNew = !HUB_SERIALS.includes(r.serial);
+    var badge = isNew ? '<span class="badge b-new">🆕 New</span>' : '<span class="badge b-match">✓ Exists</span>';
+    html += '<tr>'
+      + '<td class="mono">' + r.serial + '</td>'
+      + '<td style="max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + r.customer + '</td>'
+      + '<td class="mono">' + r.model + '</td>'
+      + '<td class="mono" style="color:var(--text2)">' + r.invoice + '</td>'
+      + '<td style="color:var(--text2);font-size:12px">' + r.location + '</td>'
+      + '<td class="mono" style="color:#6ee7b7">' + (r.amount ? r.amount.toLocaleString() : '—') + '</td>'
+      + '<td>' + badge + '</td>'
+      + '</tr>';
+  });
+  document.getElementById('erpTbl').innerHTML = html;
+}
+
+function runERPImport() {
+  var newOnes = currentERPData.filter(function(r){ return !HUB_SERIALS.includes(r.serial); });
+  erpResults = newOnes;
+  showToast('Found ' + newOnes.length + ' new machines ready to import', 'info');
+  renderERPTable(currentERPData);
+  exportERPResult();
+}
+
+function exportERPResult() {
+  var rows = [['Serial No','Customer','Model','Invoice No','Location','Amount (AED)','Sales Person']];
+  currentERPData.forEach(function(r) {
+    rows.push([r.serial, r.customer, r.model, r.invoice, r.location, r.amount, r.sp]);
+  });
+  var wb = XLSX.utils.book_new();
+  var ws = XLSX.utils.aoa_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, 'ERP Machines');
+  XLSX.writeFile(wb, 'ERP_NewMachines_' + new Date().toISOString().split('T')[0] + '.xlsx');
+  showToast('Exported ERP machine list', 'ok');
+}
+
+// ── FILE UPLOADS ───────────────────────────────────────────────────────────
+function onDropAMC(e) { e.preventDefault(); document.getElementById('dzAMC').classList.remove('drag'); onAMCFile(e.dataTransfer.files[0]); }
+function onDropERP(e) { e.preventDefault(); document.getElementById('dzERP').classList.remove('drag'); onERPFile(e.dataTransfer.files[0]); }
+
+function onAMCFile(file) {
+  if (!file) return;
+  document.getElementById('amcUploadStat').innerHTML = '<div style="font-size:12px;color:var(--text2);margin-top:8px">Reading file...</div>';
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      var wb = XLSX.read(ev.target.result, {type:'array', cellDates:true});
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      // Find header row
+      var hdr = -1;
+      for (var i = 0; i < Math.min(8, rows.length); i++) {
+        var r = rows[i].join('|').toLowerCase();
+        if (r.includes('serial') && r.includes('model')) { hdr = i; break; }
+      }
+      if (hdr < 0) { document.getElementById('amcUploadStat').innerHTML = '<div class="alert alert-err" style="margin-top:8px">Could not find header row. Expected: Serial Number, Model, Location, Start Date, End Date</div>'; return; }
+      var headers = rows[hdr];
+      function ci(kw) { return headers.findIndex(function(h){ return String(h).toLowerCase().includes(kw); }); }
+      var cols = { serial: ci('serial'), model: ci('model'), loc: ci('location'), start: ci('start'), end: ci('end'), remarks: ci('remark'), amount: ci('amount') };
+      var records = [];
+      for (var i = hdr+1; i < rows.length; i++) {
+        var r = rows[i];
+        var ser = String(r[cols.serial] || '').trim();
+        if (!ser || ser === 'Serial Number') continue;
+        function pDate(v) {
+          if (!v) return '';
+          if (v instanceof Date) { var y=v.getFullYear(),m=String(v.getMonth()+1).padStart(2,'0'),d=String(v.getDate()).padStart(2,'0'); return y+'-'+m+'-'+d; }
+          return String(v).slice(0,10);
+        }
+        records.push({ serial: ser, model: String(r[cols.model]||'').trim(), location: String(r[cols.loc]||'').trim(),
+          amount: parseFloat(r[cols.amount]) || 0, start_date: pDate(r[cols.start]), end_date: pDate(r[cols.end]),
+          remarks: String(r[cols.remarks]||'').trim() });
+      }
+      currentAMCData = records;
+      document.getElementById('amcUploadStat').innerHTML = '<div class="alert alert-ok" style="margin-top:8px">✓ Loaded ' + records.length + ' machines from ' + file.name + '</div>';
+      renderAMCTable(records);
+      updateAMCSummary(records);
+      showToast('AMC file loaded: ' + records.length + ' machines', 'ok');
+    } catch(err) {
+      document.getElementById('amcUploadStat').innerHTML = '<div class="alert alert-err" style="margin-top:8px">Error: ' + err.message + '</div>';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function onERPFile(file) {
+  if (!file) return;
+  document.getElementById('erpUploadStat').innerHTML = '<div style="font-size:12px;color:var(--text2);margin-top:8px">Reading file...</div>';
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      var wb = XLSX.read(ev.target.result, {type:'array'});
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      var hdr = -1;
+      for (var i = 0; i < Math.min(5, rows.length); i++) {
+        var r = rows[i].join('|').toLowerCase();
+        if (r.includes('customer') || r.includes('srno')) { hdr = i; break; }
+      }
+      if (hdr < 0) { document.getElementById('erpUploadStat').innerHTML = '<div class="alert alert-err" style="margin-top:8px">Could not find header row.</div>'; return; }
+      var headers = rows[hdr];
+      function ci(kw) { return headers.findIndex(function(h){ return String(h).toLowerCase().includes(kw); }); }
+      var cols = { cust: ci('customer'), prod: ci('product'), grp: ci('productgroup'), serial: ci('srno'), inv: ci('invno'), loc: ci('location'), amt: ci('amount'), sp: ci('sp') };
+      var records = [];
+      for (var i = hdr+1; i < rows.length; i++) {
+        var r = rows[i];
+        var grp = String(r[cols.grp]||'').toUpperCase();
+        if (!grp.includes('BANKING EQUIP MACHIN')) continue;
+        var ser = String(r[cols.serial]||'').trim();
+        if (!ser) continue;
+        records.push({ serial: ser, customer: String(r[cols.cust]||'').trim(), model: String(r[cols.prod]||'').trim(),
+          invoice: String(r[cols.inv]||'').trim(), location: String(r[cols.loc]||'').trim(),
+          amount: parseFloat(r[cols.amt]) || 0, sp: String(r[cols.sp]||'').trim() });
+      }
+      currentERPData = records;
+      document.getElementById('erpUploadStat').innerHTML = '<div class="alert alert-ok" style="margin-top:8px">✓ Loaded ' + records.length + ' banking machines from ' + file.name + '</div>';
+      renderERPTable(records);
+      showToast('ERP file loaded: ' + records.length + ' machines', 'ok');
+    } catch(err) {
+      document.getElementById('erpUploadStat').innerHTML = '<div class="alert alert-err" style="margin-top:8px">Error: ' + err.message + '</div>';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function fmtD(d) {
+  if (!d) return '—';
+  var p = String(d).split('-');
+  return p.length === 3 ? p[2].slice(0,2)+'-'+p[1]+'-'+p[0] : d;
+}
+
+var tTimer;
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.className = 'toast show ' + (type||'ok');
+  t.textContent = msg;
+  clearTimeout(tTimer);
+  tTimer = setTimeout(function(){ t.classList.remove('show'); }, 3000);
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>
